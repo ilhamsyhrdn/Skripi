@@ -28,23 +28,39 @@ transfer learning, fine-tuning, dan data augmentation.
   (1.054 citra CT unik setelah dedup, RS & scanner berbeda) — digabungkan ke
   training set (bukan ke val/test) untuk menambah keragaman data secara sah
 
-## Hasil Model (v6, final)
+## Hasil Model
 
-| Metrik | Nilai |
-|---|---|
-| Model | EfficientNet-B0, 224px |
-| Train / Val / Test | 2.855 / 431 / 432 |
-| Test accuracy | 72.5% |
-| ROC-AUC | 0.782 |
-| Recall kelas cancer | 68.5% |
-| Train-test gap | 16.3% |
+| Konfigurasi | Test accuracy | ROC-AUC | Recall cancer |
+|---|---|---|---|
+| v6 (single model, final individual model) | 72.5% | 0.782 | 68.5% |
+| **Ensemble v5+v6 (dipakai di inferensi/`src/predict.py`)** | **73.2%** | **0.786** | 67.4% |
 
-Lihat `reports/ablation_comparison.json` dan `notebooks/03_train.ipynb` untuk
-perbandingan lengkap **7 versi eksperimen** — termasuk versi awal yang
-performanya lebih tinggi tapi ternyata terinflasi oleh data leakage antar
-split, dan sebuah insiden leakage kedua (holdout eksternal 98.6% akurasi palsu
-akibat slice CT dari pasien yang sama tersebar ke train/holdout) yang
-ditemukan dan diperbaiki selama penelitian.
+Lihat `reports/ablation_comparison.json`, `reports/ensemble_comparison.json`,
+dan `notebooks/03_train.ipynb` untuk perbandingan lengkap **7 versi
+eksperimen training** — termasuk versi awal yang performanya lebih tinggi
+tapi ternyata terinflasi oleh data leakage antar split, dan sebuah insiden
+leakage kedua (holdout eksternal 98.6% akurasi palsu akibat slice CT dari
+pasien yang sama tersebar ke train/holdout) yang ditemukan dan diperbaiki
+selama penelitian.
+
+## Inferensi: deteksi out-of-distribution + ensemble
+
+`src/predict.py` membungkus pipeline inferensi lengkap:
+
+1. **Deteksi OOD** — citra input diekstrak jadi fitur (embedding 1280-dim dari
+   model v6), lalu diukur jaraknya (k-NN) ke seluruh embedding training. Kalau
+   terlalu jauh dari distribusi citra CT paru (threshold dikalibrasi dari
+   persentil ke-99 skor validation set, lihat `src/build_ood_detector.py`),
+   citra ditolak dengan pesan "bukan citra CT paru-paru" — model tidak
+   memaksakan jawaban cancer/no_cancer pada input yang tidak relevan.
+2. **Klasifikasi** — kalau lolos, prediksi dihitung dari ensemble rata-rata
+   softmax model v5+v6 (bukan test-time augmentation flip, yang terbukti
+   menurunkan performa karena CT paru punya orientasi kiri-kanan yang
+   bermakna — lihat `src/eval_ensemble.py`).
+
+```bash
+python src/predict.py path/ke/citra.png
+```
 
 ## Tech Stack
 
