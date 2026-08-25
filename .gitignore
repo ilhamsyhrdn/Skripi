@@ -1,0 +1,48 @@
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Dataset (jangan di-commit, terlalu besar)
+dataset/
+dataset_split/
+
+# Model checkpoints (bisa besar)
+models/*.pth
+models/*.pt
+models/*.keras
+models/*.h5
+!models/.gitkeep
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# VS Code local settings
+.vscode/settings.json
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Kaggle credentials
+.kaggle/
+kaggle.json
+access_token
+
+# TensorBoard logs
+runs/
+logs/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Downloaded files
+*.zip
+*.tar.gz
