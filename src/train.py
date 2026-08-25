@@ -1,5 +1,4 @@
 import sys
-import time
 import json
 import random
 from pathlib import Path
@@ -17,12 +16,11 @@ def main():
     import seaborn as sns
     import torch
     import torch.nn as nn
-    from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
     from sklearn.metrics import classification_report, confusion_matrix, recall_score
 
-    from dataset import get_dataloaders, compute_class_weights
-    from model import build_model, freeze_backbone, unfreeze_all, count_trainable_params
-    from engine import train_one_epoch, evaluate
+    from dataset import get_dataloaders
+    from engine import evaluate
+    from train_core import run_training
 
     RANDOM_SEED = 42
     random.seed(RANDOM_SEED)
@@ -42,15 +40,18 @@ def main():
     if device.type == "cuda":
         print(torch.cuda.get_device_name(0), flush=True)
 
-    # ------------------------------------------------------------------
-    # 1. Data loader & class weights
-    # ------------------------------------------------------------------
+    # v6: training set diperbesar dari 2.012 -> 2.855 dengan menambahkan 80% dari
+    # dataset eksternal IQ-OTH/NCCD (data CT asli terverifikasi, bukan duplikat/leakage
+    # dari sumber yang sama). B0 (4M param) + regularisasi diperkuat dari v1.
     BATCH_SIZE = 32
     NUM_WORKERS = 2
-    # v5: dataset bersih (2.012 train, turun dari 2.576) terlalu kecil untuk B2 (7.7M param)
-    # -> v4 overfitting (gap 20.4%). Balik ke B0 (4M param) + regularisasi lebih kuat.
     MODEL_NAME = "efficientnet_b0"
     IMG_SIZE = 224
+    DROP_RATE = 0.3
+    DROP_PATH_RATE = 0.2
+    LABEL_SMOOTHING = 0.1
+    WEIGHT_DECAY = 1.2e-4
+    CANCER_RECALL_BOOST = 1.3
 
     train_loader, val_loader, test_loader, class_names = get_dataloaders(
         DATA_ROOT, batch_size=BATCH_SIZE, num_workers=NUM_WORKERS, img_size=IMG_SIZE
@@ -62,145 +63,23 @@ def main():
         flush=True,
     )
 
-    class_weights = compute_class_weights(train_loader.dataset, device)
-    # Recall kelas cancer lebih kritis secara klinis (false negative lebih berbahaya
-    # daripada false positive) -> beri bobot ekstra di atas 'balanced' agar model
-    # dihukum lebih keras saat melewatkan kasus cancer.
-    CANCER_RECALL_BOOST = 1.3
-    cancer_idx_tmp = class_names.index("cancer")
-    class_weights[cancer_idx_tmp] *= CANCER_RECALL_BOOST
-    print(
-        "Class weights (setelah boost recall cancer):",
-        {c: round(w, 4) for c, w in zip(class_names, class_weights.tolist())},
-        flush=True,
-    )
-
     with open(MODELS_DIR / "class_names.json", "w") as f:
         json.dump(class_names, f)
 
-    # ------------------------------------------------------------------
-    # 2. Model + regularisasi
-    # ------------------------------------------------------------------
-    # v6: training set diperbesar dari 2.012 -> 2.855 dengan menambahkan 80% dari
-    # dataset eksternal IQ-OTH/NCCD (data CT asli terverifikasi, bukan duplikat/leakage
-    # dari sumber yang sama). Data lebih banyak -> regularisasi bisa dilonggarkan
-    # sedikit dari v5 tanpa risiko overfitting yang sama besar.
-    DROP_RATE = 0.3
-    DROP_PATH_RATE = 0.2
-    LABEL_SMOOTHING = 0.1
-    WEIGHT_DECAY = 1.2e-4
-
-    model = build_model(
-        num_classes=len(class_names),
-        pretrained=True,
-        drop_rate=DROP_RATE,
-        drop_path_rate=DROP_PATH_RATE,
-        model_name=MODEL_NAME,
-    ).to(device)
-
-    criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=LABEL_SMOOTHING)
-    print(f"Total parameter: {sum(p.numel() for p in model.parameters()):,}", flush=True)
-
-    # ------------------------------------------------------------------
-    # 3. Training loop dengan monitoring gap overfitting
-    # ------------------------------------------------------------------
-    def gap_status(train_acc, val_acc):
-        gap = train_acc - val_acc
-        if gap < 0.05:
-            return gap, "OK"
-        if gap < 0.15:
-            return gap, "WARNING"
-        return gap, "OVERFITTING"
-
-    history = {
-        "epoch": [], "phase": [], "lr": [],
-        "train_loss": [], "train_acc": [],
-        "val_loss": [], "val_acc": [], "gap": [], "gap_status": [],
-    }
-
-    best_val_loss = float("inf")
     BEST_MODEL_PATH = MODELS_DIR / "best_model.pth"
-
-    def run_epochs(phase_name, epochs, optimizer, scheduler, patience):
-        nonlocal best_val_loss
-        epochs_no_improve = 0
-
-        for epoch in range(1, epochs + 1):
-            t0 = time.time()
-            train_loss, train_acc = train_one_epoch(model, train_loader, criterion, optimizer, device)
-            val_loss, val_acc, _, _ = evaluate(model, val_loader, criterion, device)
-            gap, status = gap_status(train_acc, val_acc)
-            current_lr = optimizer.param_groups[0]["lr"]
-
-            history["epoch"].append(len(history["epoch"]) + 1)
-            history["phase"].append(phase_name)
-            history["lr"].append(current_lr)
-            history["train_loss"].append(train_loss)
-            history["train_acc"].append(train_acc)
-            history["val_loss"].append(val_loss)
-            history["val_acc"].append(val_acc)
-            history["gap"].append(gap)
-            history["gap_status"].append(status)
-
-            improved = val_loss < best_val_loss - 1e-4
-            if improved:
-                best_val_loss = val_loss
-                epochs_no_improve = 0
-                torch.save(model.state_dict(), BEST_MODEL_PATH)
-            else:
-                epochs_no_improve += 1
-
-            print(
-                f"[{phase_name}] Epoch {epoch}/{epochs} lr={current_lr:.2e} "
-                f"train_loss={train_loss:.4f} train_acc={train_acc:.4f} "
-                f"val_loss={val_loss:.4f} val_acc={val_acc:.4f} "
-                f"gap={gap:+.4f} [{status}] "
-                f"{'(saved)' if improved else ''} ({time.time() - t0:.1f}s)",
-                flush=True,
-            )
-
-            scheduler.step()
-
-            if epochs_no_improve >= patience:
-                print(
-                    f"Early stopping: val_loss tidak membaik selama {patience} epoch berturut-turut.",
-                    flush=True,
-                )
-                break
-
-    # --- Fase 1: Transfer learning (freeze backbone) ---
-    freeze_backbone(model)
-    print(f"[Fase1] Parameter trainable (head only): {count_trainable_params(model):,}", flush=True)
-
-    PHASE1_EPOCHS = 8
-    PHASE1_PATIENCE = 5
-
-    optimizer = torch.optim.AdamW(
-        filter(lambda p: p.requires_grad, model.parameters()), lr=1e-3, weight_decay=WEIGHT_DECAY
+    result = run_training(
+        train_loader, val_loader, class_names, device, BEST_MODEL_PATH,
+        model_name=MODEL_NAME, drop_rate=DROP_RATE, drop_path_rate=DROP_PATH_RATE,
+        label_smoothing=LABEL_SMOOTHING, weight_decay=WEIGHT_DECAY,
+        cancer_recall_boost=CANCER_RECALL_BOOST,
     )
-    scheduler = CosineAnnealingLR(optimizer, T_max=PHASE1_EPOCHS)
-    run_epochs("Fase1-Transfer", PHASE1_EPOCHS, optimizer, scheduler, PHASE1_PATIENCE)
-
-    # --- Fase 2: Fine-tuning (unfreeze semua layer) ---
-    unfreeze_all(model)
-    print(f"[Fase2] Parameter trainable (semua layer): {count_trainable_params(model):,}", flush=True)
-
-    PHASE2_EPOCHS = 18
-    PHASE2_PATIENCE = 6
-    WARMUP_EPOCHS = 3
-
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4, weight_decay=WEIGHT_DECAY)
-    warmup_scheduler = LinearLR(optimizer, start_factor=0.1, total_iters=WARMUP_EPOCHS)
-    cosine_scheduler = CosineAnnealingLR(optimizer, T_max=PHASE2_EPOCHS - WARMUP_EPOCHS)
-    scheduler = SequentialLR(
-        optimizer, schedulers=[warmup_scheduler, cosine_scheduler], milestones=[WARMUP_EPOCHS]
-    )
-    run_epochs("Fase2-FineTune", PHASE2_EPOCHS, optimizer, scheduler, PHASE2_PATIENCE)
-
+    model = result["model"]
+    history = result["history"]
+    best_val_loss = result["best_val_loss"]
     print(f"Best val_loss selama training: {best_val_loss:.4f}", flush=True)
 
     # ------------------------------------------------------------------
-    # 4. Kurva training
+    # Kurva training
     # ------------------------------------------------------------------
     history_df = pd.DataFrame(history)
     history_df.to_json(REPORTS_DIR / "training_history.json", orient="records", indent=2)
@@ -238,11 +117,9 @@ def main():
     plt.close(fig)
 
     # ------------------------------------------------------------------
-    # 5. Evaluasi test set (model terbaik)
+    # Evaluasi test set (model terbaik)
     # ------------------------------------------------------------------
-    model.load_state_dict(torch.load(BEST_MODEL_PATH, map_location=device))
-    model.to(device)
-
+    criterion = nn.CrossEntropyLoss()
     test_loss, test_acc, test_preds, test_labels = evaluate(model, test_loader, criterion, device)
     print(f"Test loss: {test_loss:.4f}  Test accuracy: {test_acc:.4f}", flush=True)
 
@@ -277,7 +154,7 @@ def main():
     plt.close(fig)
 
     # ------------------------------------------------------------------
-    # 6. Ringkasan akhir
+    # Ringkasan akhir
     # ------------------------------------------------------------------
     summary = {
         "class_names": class_names,
@@ -291,10 +168,7 @@ def main():
             "label_smoothing": LABEL_SMOOTHING,
             "weight_decay": WEIGHT_DECAY,
             "cancer_recall_boost": CANCER_RECALL_BOOST,
-            "class_weights": class_weights.tolist(),
-            "phase1_epochs_planned": PHASE1_EPOCHS,
-            "phase2_epochs_planned": PHASE2_EPOCHS,
-            "warmup_epochs": WARMUP_EPOCHS,
+            "class_weights": result["class_weights"],
         },
         "epochs_actually_run": len(history_df),
         "best_val_loss": float(best_val_loss),

@@ -32,8 +32,15 @@ transfer learning, fine-tuning, dan data augmentation.
 
 | Konfigurasi | Test accuracy | ROC-AUC | Recall cancer |
 |---|---|---|---|
-| v6 (single model, final individual model) | 72.5% | 0.782 | 68.5% |
-| **Ensemble v5+v6 (dipakai di inferensi/`src/predict.py`)** | **73.2%** | **0.786** | 67.4% |
+| v6 (single model) | 72.5% | 0.782 | 68.5% |
+| **Ensemble v5+v6 (dipakai di inferensi/`src/predict.py`)** | **73.2%** | **0.786** | **67.4%** |
+| Ensemble 5-fold CV (dicoba, tidak dipakai) | 75.7% | 0.788 | 59.1% |
+
+Ensemble 5-fold CV (`src/kfold_train.py`) memberi akurasi & AUC tertinggi, tapi recall
+cancer turun cukup jauh (model jadi lebih konservatif). Karena false negative pada kanker
+lebih berisiko secara klinis daripada false positive, **ensemble v5+v6 tetap dipilih
+sebagai model final** meski akurasi agregatnya sedikit lebih rendah — lihat
+`notebooks/03_train.ipynb` Bagian 9 untuk detail lengkap.
 
 Lihat `reports/ablation_comparison.json`, `reports/ensemble_comparison.json`,
 dan `notebooks/03_train.ipynb` untuk perbandingan lengkap **7 versi
