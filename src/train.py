@@ -81,12 +81,14 @@ def main():
     # ------------------------------------------------------------------
     # 2. Model + regularisasi
     # ------------------------------------------------------------------
-    # v5: dataset sudah bersih (dedup + drop conflicting label) tapi lebih kecil (2.012
-    # train). B0 (4M param) + regularisasi lebih kuat dari v1 karena data lebih sedikit.
-    DROP_RATE = 0.35
-    DROP_PATH_RATE = 0.25
+    # v6: training set diperbesar dari 2.012 -> 2.855 dengan menambahkan 80% dari
+    # dataset eksternal IQ-OTH/NCCD (data CT asli terverifikasi, bukan duplikat/leakage
+    # dari sumber yang sama). Data lebih banyak -> regularisasi bisa dilonggarkan
+    # sedikit dari v5 tanpa risiko overfitting yang sama besar.
+    DROP_RATE = 0.3
+    DROP_PATH_RATE = 0.2
     LABEL_SMOOTHING = 0.1
-    WEIGHT_DECAY = 1.5e-4
+    WEIGHT_DECAY = 1.2e-4
 
     model = build_model(
         num_classes=len(class_names),

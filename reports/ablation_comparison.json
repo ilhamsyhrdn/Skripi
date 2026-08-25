@@ -48,15 +48,39 @@
     "epochs_run": 25
   },
   {
-    "version": "v5 - B0 clean (FINAL)",
+    "version": "v5 - B0 clean data",
     "data_condition": "deduplicated (leakage + conflicting labels removed)",
     "model": "efficientnet_b0 (224px)",
-    "notes": "Model final. Dropout 0.35, drop_path 0.25, weight_decay 1.5e-4, cancer_recall_boost 1.3x",
+    "notes": "Dropout 0.35, drop_path 0.25, weight_decay 1.5e-4, cancer_recall_boost 1.3x. Belum memakai data eksternal.",
     "test_acc": 0.6898148148148148,
     "cancer_recall": 0.6574585635359116,
     "train_test_gap": 0.16008578160665643,
     "roc_auc": 0.773,
     "pr_auc": 0.782,
     "epochs_run": 26
+  },
+  {
+    "version": "v6 - B0 + 80% IQ-OTH/NCCD (FINAL)",
+    "data_condition": "deduplicated + 80% dataset eksternal IQ-OTH/NCCD digabung ke training",
+    "model": "efficientnet_b0 (224px)",
+    "notes": "Model final. Train diperbesar 2012->2855 dgn data CT eksternal terverifikasi. AUC & recall terbaik dari semua versi.",
+    "test_acc": 0.7245370370370371,
+    "cancer_recall": 0.6850828729281768,
+    "train_test_gap": 0.16267837452163192,
+    "roc_auc": 0.782,
+    "pr_auc": null,
+    "epochs_run": 24
+  },
+  {
+    "version": "v7 - B0 + 100% IQ-OTH/NCCD",
+    "data_condition": "deduplicated + 100% dataset eksternal IQ-OTH/NCCD digabung ke training",
+    "model": "efficientnet_b0 (224px)",
+    "notes": "Train diperbesar lagi ke 3066. Akurasi naik tipis tapi AUC & recall TURUN dari v6 -> tidak dipilih sebagai final (variansi training, bukan perbaikan nyata).",
+    "test_acc": 0.7314814814814815,
+    "cancer_recall": 0.6408839779005525,
+    "train_test_gap": 0.1762158440240632,
+    "roc_auc": 0.757,
+    "pr_auc": null,
+    "epochs_run": 24
   }
 ]

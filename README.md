@@ -19,26 +19,32 @@ transfer learning, fine-tuning, dan data augmentation.
 
 ## Dataset
 
-- Source: [Lung Cancer MRI Images](https://www.kaggle.com/datasets/xiaopengzhang12/lung-cancer-mri-images) (dilabel ulang sebagai citra CT, lihat catatan di atas)
+- Source utama: [Lung Cancer MRI Images](https://www.kaggle.com/datasets/xiaopengzhang12/lung-cancer-mri-images) (dilabel ulang sebagai citra CT, lihat catatan di atas)
 - Total citra mentah: 3.680 (1.874 cancer, 1.806 no_cancer)
 - Setelah deduplikasi (perceptual hash) + pembuangan 11 grup citra dengan label
   bertentangan: **2.875 citra unik** (rasio kelas ~42:58, cancer:no_cancer)
-- Format: PNG (3.668) + JPG (12)
-- Split: 70% train / 15% val / 15% test (stratified, dari data yang sudah bersih)
+- Split internal: 70% train / 15% val / 15% test (stratified, dari data yang sudah bersih)
+- Dataset tambahan: [IQ-OTH/NCCD Lung Cancer Dataset](https://www.kaggle.com/datasets/adityamahimkar/iqothnccd-lung-cancer-dataset)
+  (1.054 citra CT unik setelah dedup, RS & scanner berbeda) — digabungkan ke
+  training set (bukan ke val/test) untuk menambah keragaman data secara sah
 
-## Hasil Model (v5, final)
+## Hasil Model (v6, final)
 
 | Metrik | Nilai |
 |---|---|
 | Model | EfficientNet-B0, 224px |
-| Test accuracy | 69.0% |
-| ROC-AUC | 0.773 |
-| Recall kelas cancer | 65.7% |
-| Train-test gap | 16.0% |
+| Train / Val / Test | 2.855 / 431 / 432 |
+| Test accuracy | 72.5% |
+| ROC-AUC | 0.782 |
+| Recall kelas cancer | 68.5% |
+| Train-test gap | 16.3% |
 
 Lihat `reports/ablation_comparison.json` dan `notebooks/03_train.ipynb` untuk
-perbandingan lengkap 5 versi eksperimen (termasuk versi awal yang performanya
-lebih tinggi tapi ternyata terinflasi oleh data leakage antar split).
+perbandingan lengkap **7 versi eksperimen** — termasuk versi awal yang
+performanya lebih tinggi tapi ternyata terinflasi oleh data leakage antar
+split, dan sebuah insiden leakage kedua (holdout eksternal 98.6% akurasi palsu
+akibat slice CT dari pasien yang sama tersebar ke train/holdout) yang
+ditemukan dan diperbaiki selama penelitian.
 
 ## Tech Stack
 
