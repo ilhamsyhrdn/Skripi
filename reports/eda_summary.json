@@ -1,4 +1,6 @@
 {
+  "modality_corrected_to": "CT",
+  "modality_original_claim": "MRI",
   "total_images": 3680,
   "per_label": {
     "cancer": 1874,

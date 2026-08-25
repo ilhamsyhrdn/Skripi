@@ -11,7 +11,7 @@ IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
 def get_transforms(train: bool, img_size: int = IMG_SIZE) -> transforms.Compose:
-    # Augmentasi dipilih sesuai anatomi MRI paru: TIDAK ada vertical flip (paru
+    # Augmentasi dipilih sesuai anatomi CT paru: TIDAK ada vertical flip (paru
     # punya orientasi atas-bawah yang bermakna) dan TIDAK ada rotasi ekstrim atau
     # color jitter berlebihan (bisa membuat citra tidak realistis / merusak fitur).
     if train:
