@@ -106,6 +106,18 @@ uv pip install torch torchvision --index-url https://download.pytorch.org/whl/cu
 uv pip install -r requirements.txt
 ```
 
+## Demo App
+
+`streamlit_app/app.py` — antarmuka web untuk mengunggah citra CT dan melihat hasil
+klasifikasi (dengan deteksi OOD bawaan). Dijalankan dengan:
+
+```bash
+streamlit run streamlit_app/app.py
+```
+
+> Ditujukan sebagai demo hasil skripsi, **bukan** perangkat lunak medis yang
+> tersertifikasi — aplikasi menampilkan disclaimer ini secara eksplisit ke pengguna.
+
 ## License
 
 MIT
