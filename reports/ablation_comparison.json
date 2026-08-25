@@ -1,0 +1,62 @@
+[
+  {
+    "version": "v1 - B0 heavy regularization",
+    "data_condition": "leaked (original, with duplicates)",
+    "model": "efficientnet_b0",
+    "notes": "Dropout 0.3, drop_path 0.2, label_smoothing 0.1, class_weight balanced",
+    "test_acc": 0.7862318840579711,
+    "cancer_recall": 0.6654804270462633,
+    "train_test_gap": 0.10002587991718426,
+    "roc_auc": 0.859,
+    "pr_auc": 0.893,
+    "epochs_run": 23
+  },
+  {
+    "version": "v2 - B0 light regularization",
+    "data_condition": "leaked (original, with duplicates)",
+    "model": "efficientnet_b0",
+    "notes": "Dropout 0.15, drop_path 0.1, label_smoothing 0.05, cancer_recall_boost 1.3x",
+    "test_acc": 0.769927536231884,
+    "cancer_recall": 0.708185053380783,
+    "train_test_gap": 0.11749482401656319,
+    "roc_auc": 0.843,
+    "pr_auc": 0.884,
+    "epochs_run": 22
+  },
+  {
+    "version": "v3 - B2 256px",
+    "data_condition": "leaked (original, with duplicates)",
+    "model": "efficientnet_b2 (256px)",
+    "notes": "Dropout 0.2, drop_path 0.15, label_smoothing 0.1, cancer_recall_boost 1.3x",
+    "test_acc": 0.7862318840579711,
+    "cancer_recall": 0.693950177935943,
+    "train_test_gap": 0.14583333333333326,
+    "roc_auc": 0.86,
+    "pr_auc": 0.898,
+    "epochs_run": 25
+  },
+  {
+    "version": "v4 - B2 256px (clean data)",
+    "data_condition": "deduplicated (leakage + conflicting labels removed)",
+    "model": "efficientnet_b2 (256px)",
+    "notes": "Sama seperti v3 tapi di data bersih -> overfitting (gap 20.4%)",
+    "test_acc": 0.6990740740740741,
+    "cancer_recall": 0.6740331491712708,
+    "train_test_gap": 0.20400743686031952,
+    "roc_auc": 0.772,
+    "pr_auc": 0.799,
+    "epochs_run": 25
+  },
+  {
+    "version": "v5 - B0 clean (FINAL)",
+    "data_condition": "deduplicated (leakage + conflicting labels removed)",
+    "model": "efficientnet_b0 (224px)",
+    "notes": "Model final. Dropout 0.35, drop_path 0.25, weight_decay 1.5e-4, cancer_recall_boost 1.3x",
+    "test_acc": 0.6898148148148148,
+    "cancer_recall": 0.6574585635359116,
+    "train_test_gap": 0.16008578160665643,
+    "roc_auc": 0.773,
+    "pr_auc": 0.782,
+    "epochs_run": 26
+  }
+]

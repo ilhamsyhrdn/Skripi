@@ -7,11 +7,12 @@ def build_model(
     pretrained: bool = True,
     drop_rate: float = 0.3,
     drop_path_rate: float = 0.2,
+    model_name: str = "efficientnet_b0",
 ) -> nn.Module:
     # drop_rate = dropout di classifier head, drop_path_rate = stochastic depth
     # di backbone — dua-duanya regularisasi arsitektur untuk mengurangi overfitting.
     return timm.create_model(
-        "efficientnet_b0",
+        model_name,
         pretrained=pretrained,
         num_classes=num_classes,
         drop_rate=drop_rate,

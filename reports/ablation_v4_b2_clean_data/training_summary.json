@@ -1,0 +1,31 @@
+{
+  "class_names": [
+    "cancer",
+    "no_cancer"
+  ],
+  "random_seed": 42,
+  "config": {
+    "model_name": "efficientnet_b2",
+    "img_size": 256,
+    "batch_size": 32,
+    "drop_rate": 0.2,
+    "drop_path_rate": 0.15,
+    "label_smoothing": 0.1,
+    "weight_decay": 0.0001,
+    "cancer_recall_boost": 1.3,
+    "class_weights": [
+      1.5513641834259033,
+      0.8605645895004272
+    ],
+    "phase1_epochs_planned": 8,
+    "phase2_epochs_planned": 18,
+    "warmup_epochs": 3
+  },
+  "epochs_actually_run": 25,
+  "best_val_loss": 0.6927246666424789,
+  "test_loss": 0.7494843182740388,
+  "test_acc": 0.6990740740740741,
+  "cancer_recall": 0.6740331491712708,
+  "train_test_gap": 0.20400743686031952,
+  "best_model_path": "D:\\skripsi\\models\\best_model.pth"
+}
