@@ -43,6 +43,14 @@ leakage kedua (holdout eksternal 98.6% akurasi palsu akibat slice CT dari
 pasien yang sama tersebar ke train/holdout) yang ditemukan dan diperbaiki
 selama penelitian.
 
+**Kenapa bukan ~90%?** Tujuh konfigurasi berbeda (regularisasi, arsitektur,
+ukuran data) semuanya konvergen ke ROC-AUC ~0.77-0.79 setelah leakage
+dibersihkan, dan preprocessing crop latar (`src/investigate_crop_preprocessing.py`)
+terbukti berdampak minimal (rata-rata cuma 2.8% pengurangan area — citra
+di dataset ini sudah dipotong cukup rapat). Ini menunjukkan batasnya ada di
+ukuran/kualitas data (klasifikasi 1 slice CT 2D, bukan volume 3D), bukan lagi
+di pilihan model. Detail lengkap di `notebooks/03_train.ipynb` Bagian 8.
+
 ## Inferensi: deteksi out-of-distribution + ensemble
 
 `src/predict.py` membungkus pipeline inferensi lengkap:
