@@ -82,5 +82,17 @@
     "roc_auc": 0.757,
     "pr_auc": null,
     "epochs_run": 24
+  },
+  {
+    "version": "v8 - RadImageNet ResNet50 (dicoba, ditolak)",
+    "data_condition": "sama seperti v6/v7 (deduplicated + 80% IQ-OTH/NCCD, 3066 train)",
+    "model": "ResNet50 pretrained RadImageNet (bukan ImageNet)",
+    "notes": "Akurasi mentah tertinggi (75.2%) tapi AUC (0.762) & recall cancer (54.7%) TERENDAH dari semua versi -- model jadi paling konservatif, bukan paling baik. Training juga tidak stabil (val_loss melonjak beberapa kali di fase 1). Package tidak resmi, preprocessing tidak terdokumentasi. Ditolak, tidak dipakai.",
+    "test_acc": 0.7523148148148148,
+    "cancer_recall": 0.5469613259668509,
+    "train_test_gap": 0.11885283032543315,
+    "roc_auc": 0.762,
+    "pr_auc": 0.761,
+    "epochs_run": 15
   }
 ]

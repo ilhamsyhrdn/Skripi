@@ -23,7 +23,12 @@ def run_training(
     phase2_patience=6,
     warmup_epochs=3,
     log_prefix="",
+    model=None,
 ):
+    """model: kalau diberikan, dipakai langsung (backbone selain EfficientNet-B0
+    lewat timm, misal RadImageNetClassifier) -- model_name/drop_rate/drop_path_rate
+    diabaikan dalam kasus ini. Kalau None, dibangun lewat build_model() seperti biasa.
+    """
     import torch
     import torch.nn as nn
     from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
@@ -36,13 +41,15 @@ def run_training(
     cancer_idx = class_names.index("cancer")
     class_weights[cancer_idx] *= cancer_recall_boost
 
-    model = build_model(
-        num_classes=len(class_names),
-        pretrained=True,
-        drop_rate=drop_rate,
-        drop_path_rate=drop_path_rate,
-        model_name=model_name,
-    ).to(device)
+    if model is None:
+        model = build_model(
+            num_classes=len(class_names),
+            pretrained=True,
+            drop_rate=drop_rate,
+            drop_path_rate=drop_path_rate,
+            model_name=model_name,
+        )
+    model = model.to(device)
 
     criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=label_smoothing)
 
