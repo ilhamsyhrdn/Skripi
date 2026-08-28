@@ -17,6 +17,7 @@ def run_training(
     label_smoothing=0.1,
     weight_decay=1.2e-4,
     cancer_recall_boost=1.3,
+    boost_class_name="cancer",
     phase1_epochs=8,
     phase1_patience=5,
     phase2_epochs=18,
@@ -28,6 +29,10 @@ def run_training(
     """model: kalau diberikan, dipakai langsung (backbone selain EfficientNet-B0
     lewat timm, misal RadImageNetClassifier) -- model_name/drop_rate/drop_path_rate
     diabaikan dalam kasus ini. Kalau None, dibangun lewat build_model() seperti biasa.
+
+    boost_class_name: nama kelas yang recall-nya mau ditekankan lewat class_weight
+    ekstra (cancer_recall_boost). Kalau nama kelasnya tidak ada di class_names atau
+    cancer_recall_boost==1.0, boost dilewati (tidak error).
     """
     import torch
     import torch.nn as nn
@@ -38,8 +43,8 @@ def run_training(
     from engine import train_one_epoch, evaluate
 
     class_weights = compute_class_weights(train_loader.dataset, device)
-    cancer_idx = class_names.index("cancer")
-    class_weights[cancer_idx] *= cancer_recall_boost
+    if cancer_recall_boost != 1.0 and boost_class_name in class_names:
+        class_weights[class_names.index(boost_class_name)] *= cancer_recall_boost
 
     if model is None:
         model = build_model(

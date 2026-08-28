@@ -6,6 +6,7 @@ env/
 # Dataset (jangan di-commit, terlalu besar)
 dataset/
 dataset_split/
+dataset_split_malignant_vs_normal/
 dataset_external/
 
 # Model checkpoints (bisa besar)
