@@ -1,0 +1,361 @@
+{
+  "arch": "resnet50",
+  "fold": 2,
+  "history": [
+    {
+      "phase": "A-head",
+      "epoch": 1,
+      "train_loss": 1.035320526944221,
+      "train_acc": 0.6620926243567753,
+      "val_loss": 0.9399688652116959,
+      "val_acc": 0.8013698630136986,
+      "val_macro_f1": 0.5113707583490017,
+      "val_malignant_recall": 0.8715596330275229,
+      "val_per_class_recall": {
+        "Benign": 0.0,
+        "Malignant": 0.8715596330275229,
+        "Normal": 1.0
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 2,
+      "train_loss": 0.8769064134635401,
+      "train_acc": 0.8147512864493996,
+      "val_loss": 0.7943197766395464,
+      "val_acc": 0.8835616438356164,
+      "val_macro_f1": 0.7133364973896535,
+      "val_malignant_recall": 0.963302752293578,
+      "val_per_class_recall": {
+        "Benign": 0.4,
+        "Malignant": 0.963302752293578,
+        "Normal": 0.8181818181818182
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 3,
+      "train_loss": 0.7581729805081009,
+      "train_acc": 0.8404802744425386,
+      "val_loss": 0.7580332388616589,
+      "val_acc": 0.8013698630136986,
+      "val_macro_f1": 0.5836789016188498,
+      "val_malignant_recall": 0.8532110091743119,
+      "val_per_class_recall": {
+        "Benign": 0.13333333333333333,
+        "Malignant": 0.8532110091743119,
+        "Normal": 1.0
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 4,
+      "train_loss": 0.7138152532471187,
+      "train_acc": 0.8730703259005146,
+      "val_loss": 0.7110827263087443,
+      "val_acc": 0.8287671232876712,
+      "val_macro_f1": 0.7363679225065364,
+      "val_malignant_recall": 0.8532110091743119,
+      "val_per_class_recall": {
+        "Benign": 1.0,
+        "Malignant": 0.8532110091743119,
+        "Normal": 0.5909090909090909
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 5,
+      "train_loss": 0.6884554035667694,
+      "train_acc": 0.8524871355060034,
+      "val_loss": 0.6910088111276496,
+      "val_acc": 0.815068493150685,
+      "val_macro_f1": 0.6978382756145202,
+      "val_malignant_recall": 0.8532110091743119,
+      "val_per_class_recall": {
+        "Benign": 0.8,
+        "Malignant": 0.8532110091743119,
+        "Normal": 0.6363636363636364
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 6,
+      "train_loss": 0.6566553509460306,
+      "train_acc": 0.8336192109777015,
+      "val_loss": 0.6552638289046614,
+      "val_acc": 0.821917808219178,
+      "val_macro_f1": 0.7087752253486218,
+      "val_malignant_recall": 0.8532110091743119,
+      "val_per_class_recall": {
+        "Benign": 0.7333333333333333,
+        "Malignant": 0.8532110091743119,
+        "Normal": 0.7272727272727273
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 7,
+      "train_loss": 0.6347491879201467,
+      "train_acc": 0.8456260720411664,
+      "val_loss": 0.6131465671813652,
+      "val_acc": 0.8561643835616438,
+      "val_macro_f1": 0.7535127329818799,
+      "val_malignant_recall": 0.8623853211009175,
+      "val_per_class_recall": {
+        "Benign": 0.6,
+        "Malignant": 0.8623853211009175,
+        "Normal": 1.0
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 8,
+      "train_loss": 0.6062274897793758,
+      "train_acc": 0.8730703259005146,
+      "val_loss": 0.5743557243314508,
+      "val_acc": 0.8424657534246576,
+      "val_macro_f1": 0.7062908496732027,
+      "val_malignant_recall": 0.8715596330275229,
+      "val_per_class_recall": {
+        "Benign": 0.4,
+        "Malignant": 0.8715596330275229,
+        "Normal": 1.0
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 9,
+      "train_loss": 0.5986109642794365,
+      "train_acc": 0.8867924528301887,
+      "val_loss": 0.5353415126669897,
+      "val_acc": 0.8561643835616438,
+      "val_macro_f1": 0.730006105006105,
+      "val_malignant_recall": 0.908256880733945,
+      "val_per_class_recall": {
+        "Benign": 0.8,
+        "Malignant": 0.908256880733945,
+        "Normal": 0.6363636363636364
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 10,
+      "train_loss": 0.6008130817020737,
+      "train_acc": 0.8439108061749572,
+      "val_loss": 0.5261907977600621,
+      "val_acc": 0.863013698630137,
+      "val_macro_f1": 0.727138985675571,
+      "val_malignant_recall": 0.926605504587156,
+      "val_per_class_recall": {
+        "Benign": 0.8,
+        "Malignant": 0.926605504587156,
+        "Normal": 0.5909090909090909
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 11,
+      "train_loss": 0.5264013619202079,
+      "train_acc": 0.8902229845626072,
+      "val_loss": 0.502703166171296,
+      "val_acc": 0.8767123287671232,
+      "val_macro_f1": 0.743003449308029,
+      "val_malignant_recall": 0.944954128440367,
+      "val_per_class_recall": {
+        "Benign": 0.7333333333333333,
+        "Malignant": 0.944954128440367,
+        "Normal": 0.6363636363636364
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "A-head",
+      "epoch": 12,
+      "train_loss": 0.5824314327223632,
+      "train_acc": 0.8782161234991424,
+      "val_loss": 0.5605443765039313,
+      "val_acc": 0.8561643835616438,
+      "val_macro_f1": 0.7108788230739451,
+      "val_malignant_recall": 0.926605504587156,
+      "val_per_class_recall": {
+        "Benign": 0.7333333333333333,
+        "Malignant": 0.926605504587156,
+        "Normal": 0.5909090909090909
+      },
+      "seconds": 3.6,
+      "lr": 0.001
+    },
+    {
+      "phase": "B-finetune",
+      "epoch": 1,
+      "train_loss": 0.5903056107499791,
+      "train_acc": 0.8662092624356775,
+      "val_loss": 0.5219809519101496,
+      "val_acc": 0.8904109589041096,
+      "val_macro_f1": 0.7703703703703703,
+      "val_malignant_recall": 0.926605504587156,
+      "val_per_class_recall": {
+        "Benign": 0.5333333333333333,
+        "Malignant": 0.926605504587156,
+        "Normal": 0.9545454545454546
+      },
+      "seconds": 4.4,
+      "lr": 1e-05
+    },
+    {
+      "phase": "B-finetune",
+      "epoch": 2,
+      "train_loss": 0.5555874027477938,
+      "train_acc": 0.8799313893653516,
+      "val_loss": 0.5063338704305153,
+      "val_acc": 0.8287671232876712,
+      "val_macro_f1": 0.6921880523153057,
+      "val_malignant_recall": 0.8807339449541285,
+      "val_per_class_recall": {
+        "Benign": 0.6666666666666666,
+        "Malignant": 0.8807339449541285,
+        "Normal": 0.6818181818181818
+      },
+      "seconds": 4.4,
+      "lr": 1e-05
+    },
+    {
+      "phase": "B-finetune",
+      "epoch": 3,
+      "train_loss": 0.5101482615667183,
+      "train_acc": 0.8867924528301887,
+      "val_loss": 0.496718948426312,
+      "val_acc": 0.8424657534246576,
+      "val_macro_f1": 0.7083848256750178,
+      "val_malignant_recall": 0.8990825688073395,
+      "val_per_class_recall": {
+        "Benign": 0.7333333333333333,
+        "Malignant": 0.8990825688073395,
+        "Normal": 0.6363636363636364
+      },
+      "seconds": 4.4,
+      "lr": 1e-05
+    },
+    {
+      "phase": "B-finetune",
+      "epoch": 4,
+      "train_loss": 0.5515838277687544,
+      "train_acc": 0.8747855917667239,
+      "val_loss": 0.48758649785224706,
+      "val_acc": 0.863013698630137,
+      "val_macro_f1": 0.7476107226107226,
+      "val_malignant_recall": 0.908256880733945,
+      "val_per_class_recall": {
+        "Benign": 0.8666666666666667,
+        "Malignant": 0.908256880733945,
+        "Normal": 0.6363636363636364
+      },
+      "seconds": 4.4,
+      "lr": 1e-05
+    },
+    {
+      "phase": "B-finetune",
+      "epoch": 5,
+      "train_loss": 0.48240816429589667,
+      "train_acc": 0.9005145797598628,
+      "val_loss": 0.47356753643244914,
+      "val_acc": 0.863013698630137,
+      "val_macro_f1": 0.7492165242165242,
+      "val_malignant_recall": 0.908256880733945,
+      "val_per_class_recall": {
+        "Benign": 0.8666666666666667,
+        "Malignant": 0.908256880733945,
+        "Normal": 0.6363636363636364
+      },
+      "seconds": 4.4,
+      "lr": 5e-06
+    },
+    {
+      "phase": "B-finetune",
+      "epoch": 6,
+      "train_loss": 0.4753308771098253,
+      "train_acc": 0.9005145797598628,
+      "val_loss": 0.45760250989704915,
+      "val_acc": 0.8767123287671232,
+      "val_macro_f1": 0.7603174603174603,
+      "val_malignant_recall": 0.926605504587156,
+      "val_per_class_recall": {
+        "Benign": 0.8666666666666667,
+        "Malignant": 0.926605504587156,
+        "Normal": 0.6363636363636364
+      },
+      "seconds": 4.4,
+      "lr": 5e-06
+    },
+    {
+      "phase": "B-finetune",
+      "epoch": 7,
+      "train_loss": 0.47812299570947325,
+      "train_acc": 0.8919382504288165,
+      "val_loss": 0.4436143379505367,
+      "val_acc": 0.8698630136986302,
+      "val_macro_f1": 0.7349732942150004,
+      "val_malignant_recall": 0.9357798165137615,
+      "val_per_class_recall": {
+        "Benign": 0.8,
+        "Malignant": 0.9357798165137615,
+        "Normal": 0.5909090909090909
+      },
+      "seconds": 4.4,
+      "lr": 5e-06
+    }
+  ],
+  "best_val_macro_f1": 0.7703703703703703,
+  "best_epoch": [
+    "B-finetune",
+    1
+  ],
+  "test_readout": {
+    "accuracy": 0.8121212121212121,
+    "macro_f1": 0.6170548277535177,
+    "malignant_recall": 0.8770491803278688,
+    "per_class_recall": {
+      "Benign": 0.23529411764705882,
+      "Malignant": 0.8770491803278688,
+      "Normal": 0.8846153846153846
+    },
+    "confusion_matrix": [
+      [
+        4,
+        0,
+        13
+      ],
+      [
+        8,
+        107,
+        7
+      ],
+      [
+        3,
+        0,
+        23
+      ]
+    ]
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "total_files_found": 12882,
+  "corrupt_files": 0,
+  "sources": [
+    "CT Scan Images for Lung Cancer (Dishan rathi20)",
+    "CT Scan Images of Lung Cancer Patients.(MD. NAFEES IMTIAZ)",
+    "Chest CT-Scan images Dataset (Mohamed Hany)",
+    "IQ-OTHNCCD - Lung Cancer Dataset (Aditya Mahimkar)",
+    "IQ-OTHNCCD Lung Cancer Dataset (Augmented) (Subhajeet Das)",
+    "Lung cancer dataset (IQ-OTHNCCD)(Waseim Nagah Hennes)",
+    "The IQ-OTHNCCD lung cancer dataset ( Hamdalla F. Al-Yasriy )"
+  ],
+  "raw_label_counts_by_source": {
+    "CT Scan Images for Lung Cancer (Dishan rathi20)": {
+      "Benign": 100,
+      "Malignant": 1346,
+      "Normal": 631,
+      "Unlabeled": 197
+    },
+    "CT Scan Images of Lung Cancer Patients.(MD. NAFEES IMTIAZ)": {
+      "Benign": 120,
+      "Malignant": 784,
+      "Normal": 631,
+      "Unlabeled": 0
+    },
+    "Chest CT-Scan images Dataset (Mohamed Hany)": {
+      "Benign": 0,
+      "Malignant": 785,
+      "Normal": 215,
+      "Unlabeled": 0
+    },
+    "IQ-OTHNCCD - Lung Cancer Dataset (Aditya Mahimkar)": {
+      "Benign": 120,
+      "Malignant": 561,
+      "Normal": 416,
+      "Unlabeled": 197
+    },
+    "IQ-OTHNCCD Lung Cancer Dataset (Augmented) (Subhajeet Das)": {
+      "Benign": 1200,
+      "Malignant": 1201,
+      "Normal": 1208,
+      "Unlabeled": 0
+    },
+    "Lung cancer dataset (IQ-OTHNCCD)(Waseim Nagah Hennes)": {
+      "Benign": 120,
+      "Malignant": 1339,
+      "Normal": 614,
+      "Unlabeled": 0
+    },
+    "The IQ-OTHNCCD lung cancer dataset ( Hamdalla F. Al-Yasriy )": {
+      "Benign": 120,
+      "Malignant": 561,
+      "Normal": 416,
+      "Unlabeled": 0
+    }
+  },
+  "exact_md5_duplicate_groups": 2098,
+  "exact_phash_duplicate_groups": 1819,
+  "adjacent_slice_near_duplicate_unions": 2088,
+  "cross_source_near_duplicate_unions": 0,
+  "total_groups_all_valid_images": 971,
+  "groups_with_gt1_member": 971,
+  "cross_dataset_duplicate_groups": 971,
+  "label_conflict_groups": 0,
+  "synthetic_source_images_excluded": 3609,
+  "synthetic_images_exact_byte_match_to_real_pool": 1097,
+  "synthetic_images_exact_phash_match_to_real_pool": 1077,
+  "unlabeled_images_excluded": 394,
+  "canonical_pool_size": 894,
+  "canonical_pool_label_counts": {
+    "Malignant": 665,
+    "Normal": 136,
+    "Benign": 93
+  },
+  "canonical_pool_subtype_counts": {
+    "Unspecified": 416,
+    "Normal": 136,
+    "Adenocarcinoma": 112,
+    "Benign": 93,
+    "SquamousCellCarcinoma": 72,
+    "LargeCellCarcinoma": 65
+  },
+  "elapsed_seconds": 6.3
+}

@@ -1,51 +1,17 @@
-# Virtual environment
-.venv/
-venv/
-env/
+# Data mentah (1.5GB, hasil download Kaggle - jangan diredistribusi via git, ToS Kaggle & ukuran)
+Dataset/
 
-# Dataset (jangan di-commit, terlalu besar)
-dataset/
-dataset_split/
-dataset_split_malignant_vs_normal/
-dataset_external/
-
-# Model checkpoints (bisa besar)
-models/*.pth
-models/*.pt
-models/*.keras
-models/*.h5
-models/*.pkl
-!models/.gitkeep
-
-# Python cache
-__pycache__/
+# Virtual environment & cache Python
+Kodingan/.venv/
+**/__pycache__/
 *.pyc
-*.pyo
-*.pyd
 
-# Jupyter
-.ipynb_checkpoints/
-*.ipynb_checkpoints
+# Checkpoint model terlatih (besar, bisa direproduksi ulang lewat src/training/train_cv.py)
+Kodingan/outputs/models/*.pt
 
-# VS Code local settings
-.vscode/settings.json
+# Cache & log yang bisa dibuat ulang / tidak perlu di-diff
+Kodingan/outputs/manifests/_fingerprint_cache.csv
+Kodingan/outputs/logs/*.log
 
-# OS
-Thumbs.db
-.DS_Store
-
-# Kaggle credentials
-.kaggle/
-kaggle.json
-access_token
-
-# TensorBoard logs
-runs/
-logs/
-
-# Streamlit
-.streamlit/secrets.toml
-
-# Downloaded files
-*.zip
-*.tar.gz
+# Streamlit local state
+.streamlit/
