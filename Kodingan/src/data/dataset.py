@@ -1,4 +1,4 @@
-"""PyTorch Dataset + transform builders for the deduplicated lung-CT manifest."""
+"""PyTorch Dataset + transform builders for the LIDC-IDRI canonical manifest."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -17,9 +17,9 @@ CLASS_TO_IDX = {c: i for i, c in enumerate(CLASS_NAMES)}
 
 
 def build_transforms(image_size: int = 224, train: bool = True, augment_strength: str = "medium") -> v2.Compose:
-    """Basic (geometric + intensity) augmentation per Chlap et al. (2021) and the proposal's
-    section 2.5 / 3.2: rotation, horizontal flip, zoom/scale, translation, brightness/contrast.
-    Applied ONLY to the training split -- validation/test always use the deterministic pipeline.
+    """Geometric + intensity augmentation: rotation, horizontal flip, zoom/scale,
+    translation, brightness/contrast. Applied ONLY to the training split --
+    validation/test always use the deterministic pipeline.
     """
     if not train:
         return v2.Compose(
@@ -31,23 +31,36 @@ def build_transforms(image_size: int = 224, train: bool = True, augment_strength
             ]
         )
 
+    # "ct" keeps only the variation a chest CT can actually show. Hounsfield
+    # units are physically calibrated, so a grey level means a tissue density:
+    # jittering brightness/contrast corrupts signal rather than nuisance. And a
+    # nodule spans a few pixels of a 512px slice, so translation and rescaling
+    # can resample it away. Flip and a small rotation survive both objections.
     strengths = {
+        "ct": dict(rot=7, jitter=0.0, translate=0.0, scale=(1.0, 1.0)),
         "light": dict(rot=10, jitter=0.1, translate=0.05, scale=(0.95, 1.05)),
         "medium": dict(rot=15, jitter=0.2, translate=0.1, scale=(0.9, 1.1)),
         "heavy": dict(rot=20, jitter=0.3, translate=0.15, scale=(0.85, 1.15)),
     }
     p = strengths[augment_strength]
-    return v2.Compose(
-        [
-            v2.ToImage(),
-            v2.Resize((image_size, image_size), antialias=True),
-            v2.RandomHorizontalFlip(p=0.5),
-            v2.RandomAffine(degrees=p["rot"], translate=(p["translate"], p["translate"]), scale=p["scale"]),
-            v2.ColorJitter(brightness=p["jitter"], contrast=p["jitter"]),
-            v2.ToDtype(torch.float32, scale=True),
-            v2.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-        ]
-    )
+    steps = [
+        v2.ToImage(),
+        v2.Resize((image_size, image_size), antialias=True),
+        v2.RandomHorizontalFlip(p=0.5),
+    ]
+    if p["translate"] or p["scale"] != (1.0, 1.0):
+        steps.append(v2.RandomAffine(degrees=p["rot"],
+                                     translate=(p["translate"], p["translate"]),
+                                     scale=p["scale"]))
+    elif p["rot"]:
+        steps.append(v2.RandomRotation(degrees=p["rot"]))
+    if p["jitter"]:
+        steps.append(v2.ColorJitter(brightness=p["jitter"], contrast=p["jitter"]))
+    steps += [
+        v2.ToDtype(torch.float32, scale=True),
+        v2.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+    ]
+    return v2.Compose(steps)
 
 
 class LungCTDataset(Dataset):
@@ -68,11 +81,3 @@ class LungCTDataset(Dataset):
             x = self.transform(im)
         y = CLASS_TO_IDX[row[self.label_col]]
         return x, y
-
-    @property
-    def targets(self):
-        return [CLASS_TO_IDX[v] for v in self.df[self.label_col]]
-
-
-def load_manifest(csv_path: str | Path) -> pd.DataFrame:
-    return pd.read_csv(csv_path)

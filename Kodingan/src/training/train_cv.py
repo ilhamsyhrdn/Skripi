@@ -1,200 +1,237 @@
-"""
-5-fold cross-validation training of a transfer-learned, fine-tuned classifier
-(EfficientNet-B0 primary / ResNet50 for ensemble diversity) on the deduplicated,
-leakage-safe lung-CT manifest.
+"""Two-phase transfer learning (feature extraction -> fine-tuning) for
+EfficientNet-B0 and ResNet50, 5-fold StratifiedGroupKFold. Trains
+5 folds x 2 architectures = 10 models per --variant, each saved as
+outputs/models_<variant>/{arch}_fold{k}.pt (keeping the best val
+macro-F1 checkpoint seen across BOTH phases).
 
-Two-phase schedule per fold (proposal section 2.4 / 3.4.1 / 3.5.2):
-  Phase A - freeze the ImageNet backbone, train only the new 3-class head.
-  Phase B - unfreeze the last few backbone blocks, fine-tune everything with a much
-            smaller learning rate.
-Both phases use early stopping + checkpointing on validation macro-F1.
+--variant selects which experiment stage this run corresponds to
+(Bab IV): whole_slice (LIDC-IDRI, no crop) -> crop (LIDC-IDRI, nodule
+crop) -> pathology (LIDC-IDRI, pathology-corrected labels) -> combined
+(Kaggle + LIDC-IDRI, the adopted final configuration).
 
-Prints live per-epoch progress to stdout AND appends every line to
-Kodingan/outputs/logs/train_<arch>.log so progress can be tailed while it runs.
-
-Run:
-  Kodingan/.venv/Scripts/python.exe -m src.training.train_cv --arch efficientnet_b0
-  Kodingan/.venv/Scripts/python.exe -m src.training.train_cv --arch resnet50
+Live per-epoch progress is printed to stdout (flush=True) so the run can be
+watched in real time, not silently.
 """
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 import time
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
+from sklearn.metrics import f1_score, recall_score
 from torch.utils.data import DataLoader
 
-KODINGAN_DIR = Path(__file__).resolve().parents[2]  # .../Kodingan
-sys.path.insert(0, str(KODINGAN_DIR))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from data.dataset import CLASS_NAMES, LungCTDataset, build_transforms
+from models.factory import build_model, freeze_backbone, unfreeze_for_finetune
 
-from src.data.dataset import CLASS_NAMES, LungCTDataset, build_transforms, load_manifest  # noqa: E402
-from src.models.factory import build_model, freeze_backbone, trainable_param_count, unfreeze_for_finetune  # noqa: E402
-from src.training.engine import fit, run_epoch  # noqa: E402
+MANIFESTS = Path("D:/skripsi/Kodingan/outputs/manifests")
+OUTPUTS = Path("D:/skripsi/Kodingan/outputs")
+REPORT_DIR = OUTPUTS / "reports"
 
-MANIFEST_DIR = KODINGAN_DIR / "outputs" / "manifests"
-MODEL_DIR = KODINGAN_DIR / "outputs" / "models"
-LOG_DIR = KODINGAN_DIR / "outputs" / "logs"
-REPORT_DIR = KODINGAN_DIR / "outputs" / "reports"
-for d in (MODEL_DIR, LOG_DIR, REPORT_DIR):
-    d.mkdir(parents=True, exist_ok=True)
+# variant -> (trainval csv, model dir, history filename prefix)
+VARIANTS = {
+    "whole_slice": (MANIFESTS / "trainval_folds.csv", OUTPUTS / "models", ""),
+    "crop": (MANIFESTS / "trainval_folds_crop.csv", OUTPUTS / "models_crop", "crop_"),
+    "pathology": (MANIFESTS / "trainval_folds_final.csv", OUTPUTS / "models_final", "final_"),
+    "combined": (MANIFESTS / "trainval_folds_combined.csv", OUTPUTS / "models_combined", "combined_"),
+    # uncropped chest slices: a nodule occupies few pixels, so the input
+    # resolution is raised to keep that detail after resizing
+    "full": (MANIFESTS / "trainval_folds_full.csv", OUTPUTS / "models_full", "full_"),
+}
 
-
-def make_logger(arch: str):
-    log_path = LOG_DIR / f"train_{arch}.log"
-    fh = open(log_path, "a", encoding="utf-8")
-
-    def log(msg: str = "", flush: bool = True):
-        print(msg, flush=flush)
-        fh.write(str(msg) + "\n")
-        if flush:
-            fh.flush()
-
-    return log, fh
+N_FOLDS = 5
+BATCH_SIZE = 32
+IMG_SIZE = 224
 
 
-def class_weights_from_df(df, device) -> torch.Tensor:
+def class_weights_from_df(df, device):
     counts = df["canonical_label"].value_counts()
     freqs = np.array([counts.get(c, 1) for c in CLASS_NAMES], dtype=np.float64)
     weights = freqs.sum() / (len(CLASS_NAMES) * freqs)
     return torch.tensor(weights, dtype=torch.float32, device=device)
 
 
+def evaluate(model, loader, device):
+    model.eval()
+    all_preds, all_labels, all_losses = [], [], []
+    criterion = nn.CrossEntropyLoss()
+    with torch.no_grad():
+        for x, y in loader:
+            x, y = x.to(device), y.to(device)
+            logits = model(x)
+            loss = criterion(logits, y)
+            all_losses.append(loss.item())
+            all_preds.extend(logits.argmax(1).cpu().numpy())
+            all_labels.extend(y.cpu().numpy())
+    acc = float(np.mean(np.array(all_preds) == np.array(all_labels)))
+    macro_f1 = f1_score(all_labels, all_preds, average="macro", zero_division=0)
+    malignant_idx = CLASS_NAMES.index("Malignant")
+    cancer_recall = recall_score(all_labels, all_preds, labels=[malignant_idx], average="macro", zero_division=0)
+    return {"loss": float(np.mean(all_losses)), "acc": acc, "macro_f1": macro_f1, "cancer_recall": cancer_recall}
+
+
+def fit(model, train_loader, val_loader, criterion, optimizer, device, epochs, phase_name,
+        scaler, patience=6, scheduler=None, best_state_holder=None, history=None):
+    best_f1_this_phase = -1.0
+    epochs_no_improve = 0
+
+    for epoch in range(1, epochs + 1):
+        model.train()
+        t0 = time.time()
+        train_losses, train_correct, train_total = [], 0, 0
+        for x, y in train_loader:
+            x, y = x.to(device), y.to(device)
+            optimizer.zero_grad(set_to_none=True)
+            with torch.autocast(device_type=device.type, enabled=(device.type == "cuda")):
+                logits = model(x)
+                loss = criterion(logits, y)
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            train_losses.append(loss.item())
+            train_correct += (logits.argmax(1) == y).sum().item()
+            train_total += y.size(0)
+
+        train_loss = float(np.mean(train_losses))
+        train_acc = train_correct / train_total
+        val_metrics = evaluate(model, val_loader, device)
+        elapsed = time.time() - t0
+
+        if scheduler is not None:
+            scheduler.step(val_metrics["macro_f1"])
+        lr_now = optimizer.param_groups[0]["lr"]
+
+        print(f"  [{phase_name}] epoch {epoch}/{epochs} lr={lr_now:.1e} "
+              f"train_loss={train_loss:.4f} train_acc={train_acc:.3f} "
+              f"val_loss={val_metrics['loss']:.4f} val_acc={val_metrics['acc']:.3f} "
+              f"val_macroF1={val_metrics['macro_f1']:.3f} val_cancerRecall={val_metrics['cancer_recall']:.3f} "
+              f"({elapsed:.1f}s)", flush=True)
+
+        if history is not None:
+            history.append({"phase": phase_name, "epoch": epoch, "lr": lr_now,
+                             "train_loss": train_loss, "train_acc": train_acc, **val_metrics})
+
+        if best_state_holder is not None and val_metrics["macro_f1"] > best_state_holder["best_f1"]:
+            best_state_holder["best_f1"] = val_metrics["macro_f1"]
+            best_state_holder["state_dict"] = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+
+        if val_metrics["macro_f1"] > best_f1_this_phase:
+            best_f1_this_phase = val_metrics["macro_f1"]
+            epochs_no_improve = 0
+        else:
+            epochs_no_improve += 1
+            if epochs_no_improve >= patience:
+                print(f"  [{phase_name}] early stopping at epoch {epoch} "
+                      f"(no val macro-F1 improvement for {patience} epochs)", flush=True)
+                break
+
+
+def train_one_fold(arch: str, fold: int, trainval_df: pd.DataFrame, device, model_dir: Path,
+                   history_prefix: str, img_size: int = IMG_SIZE, batch_size: int = BATCH_SIZE,
+                   augment: bool = True, augment_strength: str = "medium"):
+    train_df = trainval_df[trainval_df["fold"] != fold].reset_index(drop=True)
+    val_df = trainval_df[trainval_df["fold"] == fold].reset_index(drop=True)
+
+    # augment=False gives the deterministic pipeline (resize + normalise only),
+    # which is the ablation used to measure what augmentation actually buys
+    train_ds = LungCTDataset(train_df, build_transforms(img_size, train=augment,
+                                                        augment_strength=augment_strength))
+    val_ds = LungCTDataset(val_df, build_transforms(img_size, train=False))
+    # data loading, not GPU compute, is the bottleneck here -- more workers help
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=6,
+                              pin_memory=True, persistent_workers=True, prefetch_factor=4)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=4,
+                            pin_memory=True, persistent_workers=True)
+
+    model = build_model(arch).to(device)
+    class_weights = class_weights_from_df(train_df, device)
+    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    scaler = torch.amp.GradScaler(enabled=(device.type == "cuda"))
+    best_holder = {"best_f1": -1.0, "state_dict": None}
+    history = []
+
+    print(f"\n=== {arch} fold {fold} === train={len(train_df)} val={len(val_df)} "
+          f"class_weights={class_weights.cpu().numpy().round(3).tolist()}", flush=True)
+
+    # Phase A: feature extraction
+    freeze_backbone(model, arch)
+    opt_a = torch.optim.Adam([p for p in model.parameters() if p.requires_grad], lr=1e-3)
+    fit(model, train_loader, val_loader, criterion, opt_a, device,
+        epochs=12, phase_name="A-head", scaler=scaler, patience=6,
+        best_state_holder=best_holder, history=history)
+
+    # Phase B: fine-tuning
+    unfreeze_for_finetune(model, arch, n_blocks=3)
+    opt_b = torch.optim.Adam([p for p in model.parameters() if p.requires_grad], lr=1e-5)
+    sched_b = torch.optim.lr_scheduler.ReduceLROnPlateau(opt_b, mode="max", factor=0.5, patience=3)
+    fit(model, train_loader, val_loader, criterion, opt_b, device,
+        epochs=25, phase_name="B-finetune", scaler=scaler, scheduler=sched_b,
+        patience=6, best_state_holder=best_holder, history=history)
+
+    model.load_state_dict(best_holder["state_dict"])
+    model_dir.mkdir(parents=True, exist_ok=True)
+    torch.save({"state_dict": model.state_dict(), "arch": arch, "fold": fold,
+                "best_val_macro_f1": best_holder["best_f1"]},
+               model_dir / f"{arch}_fold{fold}.pt")
+
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(history).to_json(REPORT_DIR / f"history_{history_prefix}{arch}_fold{fold}.json", orient="records")
+    print(f"=== {arch} fold {fold} DONE -- best val macro-F1 = {best_holder['best_f1']:.4f} ===", flush=True)
+    return best_holder["best_f1"]
+
+
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--arch", default="efficientnet_b0", choices=["efficientnet_b0", "resnet50"])
-    ap.add_argument("--image_size", type=int, default=224)
-    ap.add_argument("--batch_size", type=int, default=32)
-    ap.add_argument("--phase_a_epochs", type=int, default=12)
-    ap.add_argument("--phase_b_epochs", type=int, default=25)
-    ap.add_argument("--lr_head", type=float, default=1e-3)
-    ap.add_argument("--lr_finetune", type=float, default=1e-5)
-    ap.add_argument("--unfreeze_blocks", type=int, default=3)
-    ap.add_argument("--patience", type=int, default=6)
-    ap.add_argument("--augment", default="medium", choices=["light", "medium", "heavy"])
-    ap.add_argument("--folds", default="0,1,2,3,4")
-    ap.add_argument("--dropout", type=float, default=0.3)
-    ap.add_argument("--seed", type=int, default=42)
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--variant", choices=sorted(VARIANTS), default="combined",
+                         help="Which experiment stage (Bab IV) to train.")
+    parser.add_argument("--img-size", type=int, default=IMG_SIZE,
+                         help="Input resolution; raise it for uncropped slices.")
+    parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+    parser.add_argument("--no-augment", action="store_true",
+                         help="Ablation: train without data augmentation, to measure its effect.")
+    parser.add_argument("--augment-strength", default="medium", choices=["ct", "light", "medium", "heavy"],
+                         help="Which augmentation preset to train with (see data/dataset.py).")
+    args = parser.parse_args()
+    trainval_csv, model_dir, history_prefix = VARIANTS[args.variant]
+    if args.no_augment:
+        model_dir = model_dir.with_name(model_dir.name + "_noaug")
+        history_prefix = history_prefix + "noaug_"
+    elif args.augment_strength != "medium":
+        model_dir = model_dir.with_name(f"{model_dir.name}_aug{args.augment_strength}")
+        history_prefix = f"{history_prefix}aug{args.augment_strength}_"
 
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-
-    log, fh = make_logger(args.arch)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    log(f"\n{'='*90}")
-    log(f"START run arch={args.arch} device={device} args={vars(args)}")
-    log(f"{'='*90}")
+    print(f"Variant: {args.variant} | Device: {device} | img_size={args.img_size} | "
+          f"batch={args.batch_size} | "
+          f"augmentasi={'TIDAK' if args.no_augment else args.augment_strength}", flush=True)
+    trainval_df = pd.read_csv(trainval_csv)
 
-    trainval = load_manifest(MANIFEST_DIR / "trainval_folds.csv")
-    test_df = load_manifest(MANIFEST_DIR / "test_holdout.csv")
+    results = {}
+    for arch in ["efficientnet_b0", "resnet50"]:
+        for fold in range(N_FOLDS):
+            # a finished checkpoint is left alone, so an interrupted run resumes
+            # where it stopped instead of retraining everything from scratch
+            ckpt = model_dir / f"{arch}_fold{fold}.pt"
+            if ckpt.exists():
+                prev = torch.load(ckpt, map_location="cpu", weights_only=False)
+                results[f"{arch}_fold{fold}"] = prev.get("best_val_macro_f1", float("nan"))
+                print(f"\n=== {arch} fold {fold} DILEWATI (checkpoint sudah ada) ===", flush=True)
+                continue
+            f1 = train_one_fold(arch, fold, trainval_df, device, model_dir, history_prefix,
+                                img_size=args.img_size, batch_size=args.batch_size,
+                                augment=not args.no_augment,
+                                augment_strength=args.augment_strength)
+            results[f"{arch}_fold{fold}"] = f1
 
-    folds = [int(f) for f in args.folds.split(",")]
-    all_fold_summaries = []
-
-    for k in folds:
-        t_fold0 = time.time()
-        log(f"\n--- FOLD {k} ---")
-        train_df = trainval[trainval["fold"] != k].reset_index(drop=True)
-        val_df = trainval[trainval["fold"] == k].reset_index(drop=True)
-        log(f"  train={len(train_df)}  val={len(val_df)}  "
-            f"train_label_counts={train_df['canonical_label'].value_counts().to_dict()}")
-
-        train_tf = build_transforms(args.image_size, train=True, augment_strength=args.augment)
-        eval_tf = build_transforms(args.image_size, train=False)
-
-        train_ds = LungCTDataset(train_df, train_tf)
-        val_ds = LungCTDataset(val_df, eval_tf)
-        train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
-        val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=0, pin_memory=True)
-
-        model = build_model(args.arch, dropout=args.dropout).to(device)
-        criterion = nn.CrossEntropyLoss(weight=class_weights_from_df(train_df, device))
-        scaler = torch.cuda.amp.GradScaler(enabled=(device.type == "cuda"))
-        best_holder = {"best_f1": -1.0}
-
-        # ---- Phase A: frozen backbone, train head only ----
-        freeze_backbone(model, args.arch)
-        trainable, total = trainable_param_count(model)
-        log(f"  Phase A (head only): trainable={trainable:,}/{total:,} params")
-        opt_a = torch.optim.Adam([p for p in model.parameters() if p.requires_grad], lr=args.lr_head)
-        hist_a = fit(
-            model, train_loader, val_loader, criterion, opt_a, device,
-            epochs=args.phase_a_epochs, phase_name="A-head", scaler=scaler,
-            patience=args.patience, best_state_holder=best_holder, log_fn=log,
-        )
-
-        # restore best-of-phase-A before unfreezing, so phase B fine-tunes from the best point
-        model.load_state_dict(best_holder["state_dict"])
-
-        # ---- Phase B: unfreeze last blocks, fine-tune with small LR ----
-        unfreeze_for_finetune(model, args.arch, n_blocks=args.unfreeze_blocks)
-        trainable, total = trainable_param_count(model)
-        log(f"  Phase B (fine-tune last {args.unfreeze_blocks} blocks): trainable={trainable:,}/{total:,} params")
-        opt_b = torch.optim.Adam([p for p in model.parameters() if p.requires_grad], lr=args.lr_finetune)
-        sched_b = torch.optim.lr_scheduler.ReduceLROnPlateau(opt_b, mode="max", factor=0.5, patience=3)
-        hist_b = fit(
-            model, train_loader, val_loader, criterion, opt_b, device,
-            epochs=args.phase_b_epochs, phase_name="B-finetune", scaler=scaler, scheduler=sched_b,
-            patience=args.patience, best_state_holder=best_holder, log_fn=log,
-        )
-
-        # restore overall best (across both phases) and save
-        model.load_state_dict(best_holder["state_dict"])
-        ckpt_path = MODEL_DIR / f"{args.arch}_fold{k}.pt"
-        torch.save({"state_dict": model.state_dict(), "arch": args.arch, "fold": k,
-                    "best_val_macro_f1": best_holder["best_f1"], "best_epoch": best_holder["best_epoch"],
-                    "class_names": CLASS_NAMES}, ckpt_path)
-        log(f"  saved best checkpoint -> {ckpt_path} (val_macro_f1={best_holder['best_f1']:.4f}, "
-            f"from {best_holder['best_epoch']})")
-
-        # quick held-out-test readout for progress visibility (final ensemble number computed separately)
-        test_tf = build_transforms(args.image_size, train=False)
-        test_ds = LungCTDataset(test_df, test_tf)
-        test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False, num_workers=0)
-        test_res = run_epoch(model, test_loader, criterion, device, None, scaler)
-        log(f"  [fold {k}] held-out TEST (single-model, informational only): "
-            f"acc={test_res.accuracy:.3f} macroF1={test_res.macro_f1:.3f} "
-            f"malignantRecall={test_res.malignant_recall:.3f} per_class_recall={test_res.per_class_recall}")
-
-        with open(REPORT_DIR / f"{args.arch}_fold{k}_history.json", "w", encoding="utf-8") as jf:
-            json.dump(
-                {
-                    "arch": args.arch, "fold": k,
-                    "history": hist_a + hist_b,
-                    "best_val_macro_f1": best_holder["best_f1"],
-                    "best_epoch": list(best_holder["best_epoch"]),
-                    "test_readout": {
-                        "accuracy": test_res.accuracy, "macro_f1": test_res.macro_f1,
-                        "malignant_recall": test_res.malignant_recall,
-                        "per_class_recall": test_res.per_class_recall,
-                        "confusion_matrix": test_res.confusion.tolist(),
-                    },
-                },
-                jf, indent=2,
-            )
-
-        all_fold_summaries.append({
-            "fold": k, "val_macro_f1": best_holder["best_f1"],
-            "test_acc": test_res.accuracy, "test_macro_f1": test_res.macro_f1,
-            "test_malignant_recall": test_res.malignant_recall,
-            "seconds": round(time.time() - t_fold0, 1),
-        })
-        log(f"  fold {k} done in {time.time()-t_fold0:.1f}s")
-
-        del model
-        torch.cuda.empty_cache()
-
-    log(f"\n=== ALL FOLDS DONE ({args.arch}) ===")
-    for s in all_fold_summaries:
-        log(f"  {s}")
-    with open(REPORT_DIR / f"{args.arch}_cv_summary.json", "w", encoding="utf-8") as jf:
-        json.dump(all_fold_summaries, jf, indent=2)
-    fh.close()
+    print("\n=== ALL FOLDS DONE ===", flush=True)
+    for k, v in results.items():
+        print(f"  {k}: best val macro-F1 = {v:.4f}", flush=True)
 
 
 if __name__ == "__main__":

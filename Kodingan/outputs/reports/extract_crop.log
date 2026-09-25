@@ -1,0 +1,24 @@
+Total series to process: 1308
+  [100/1308] new_ok=100 skipped_existing=0 fail=0
+  [200/1308] new_ok=200 skipped_existing=0 fail=0
+  [300/1308] new_ok=300 skipped_existing=0 fail=0
+  [400/1308] new_ok=400 skipped_existing=0 fail=0
+  [500/1308] new_ok=500 skipped_existing=0 fail=0
+  [600/1308] new_ok=600 skipped_existing=0 fail=0
+  [700/1308] new_ok=700 skipped_existing=0 fail=0
+  [800/1308] new_ok=800 skipped_existing=0 fail=0
+  [900/1308] new_ok=900 skipped_existing=0 fail=0
+  [1000/1308] new_ok=1000 skipped_existing=0 fail=0
+  [1100/1308] new_ok=1100 skipped_existing=0 fail=0
+  [1200/1308] new_ok=1200 skipped_existing=0 fail=0
+  [1300/1308] new_ok=1300 skipped_existing=0 fail=0
+  [1308/1308] new_ok=1308 skipped_existing=0 fail=0
+
+=== Final image counts (cropped) ===
+canonical_label
+Malignant       436
+Normal          425
+Excluded_TBD    226
+Benign          221
+Name: count, dtype: int64
+Saved manifest: D:\skripsi\Kodingan\outputs\manifests\lidc_canonical_pool_crop.csv

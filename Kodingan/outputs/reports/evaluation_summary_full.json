@@ -1,0 +1,17 @@
+{
+  "final_ensemble_config": "Ensemble 10-model (bobot tertimbang)",
+  "final_metrics": {
+    "accuracy": 0.7750511247443763,
+    "macro_f1": 0.7174593998901978,
+    "cancer_recall": 0.7620578778135049,
+    "benign_recall": 0.6617647058823529,
+    "roc_auc": 0.9095203905974474
+  },
+  "per_class_auc": {
+    "Benign": 0.8425667178985607,
+    "Malignant": 0.9386809494562665,
+    "Normal": 0.9473135044375149
+  },
+  "n_test": 489,
+  "n_misclassified": 110
+}

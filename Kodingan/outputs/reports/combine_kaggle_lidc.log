@@ -1,0 +1,26 @@
+Kaggle: 1627 images
+canonical_label
+Malignant    1192
+Normal        342
+Benign         93
+Name: count, dtype: int64
+
+LIDC-IDRI: 1308 images
+canonical_label
+Malignant    674
+Benign       317
+Normal       317
+Name: count, dtype: int64
+
+Cross-checking for accidental cross-dataset duplicates...
+Cross-dataset duplicates found: 0 (expected 0 -- different acquisition pipelines)
+
+=== Combined pool ===
+Total: 2935 images, 2531 unique groups
+canonical_label
+Malignant    1866
+Normal        659
+Benign        410
+Name: count, dtype: int64
+
+Saved: D:\skripsi\Kodingan\outputs\manifests\combined_canonical_pool.csv

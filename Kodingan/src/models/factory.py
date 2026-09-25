@@ -1,11 +1,15 @@
-"""Model factory: EfficientNet-B0 (primary, per the proposal) + ResNet50 (second
-architecture used only to add diversity to the ensemble, mirroring Wang et al. 2022 /
-Saha et al. 2024 / Sandag & Kabo 2024's EfficientNet-vs-ResNet comparisons in the
-attached literature).
+"""Model factory: EfficientNet-B0 (main) and ResNet50 (comparison), both
+ImageNet-pretrained, with a Dropout(0.3) + Linear(3) classification head, and
+the two-phase (feature extraction / fine-tuning) freeze helpers.
+
+n_blocks in unfreeze_for_finetune is NOT comparable across the two: at
+n_blocks=3 it reopens 99.0% of ResNet50's parameters (23.3M) but 78.8% of
+EfficientNet-B0's (3.2M). The proportions are closer than the block count
+suggests; what differs by an order of magnitude is the absolute capacity
+being refitted, which is why the two respond so differently to fine-tuning.
 """
 from __future__ import annotations
 
-import torch
 import torch.nn as nn
 from torchvision.models import (
     EfficientNet_B0_Weights,
@@ -14,10 +18,8 @@ from torchvision.models import (
     resnet50,
 )
 
-N_CLASSES = 3
 
-
-def build_model(arch: str = "efficientnet_b0", n_classes: int = N_CLASSES, dropout: float = 0.3) -> nn.Module:
+def build_model(arch: str = "efficientnet_b0", n_classes: int = 3, dropout: float = 0.3):
     if arch == "efficientnet_b0":
         model = efficientnet_b0(weights=EfficientNet_B0_Weights.IMAGENET1K_V1)
         in_features = model.classifier[1].in_features
@@ -29,17 +31,13 @@ def build_model(arch: str = "efficientnet_b0", n_classes: int = N_CLASSES, dropo
     if arch == "resnet50":
         model = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
         in_features = model.fc.in_features
-        model.fc = nn.Sequential(
-            nn.Dropout(p=dropout),
-            nn.Linear(in_features, n_classes),
-        )
+        model.fc = nn.Sequential(nn.Dropout(p=dropout), nn.Linear(in_features, n_classes))
         return model
-    raise ValueError(f"Unknown arch: {arch}")
+    raise ValueError(f"unknown arch: {arch}")
 
 
-def freeze_backbone(model: nn.Module, arch: str) -> None:
-    """Phase A: freeze everything except the new classification head (transfer learning
-    with the backbone as a fixed feature extractor -- proposal section 3.3.2 step 1)."""
+def freeze_backbone(model, arch):
+    """Phase A: freeze everything except the new classification head."""
     for p in model.parameters():
         p.requires_grad = False
     head = model.classifier if arch == "efficientnet_b0" else model.fc
@@ -47,39 +45,19 @@ def freeze_backbone(model: nn.Module, arch: str) -> None:
         p.requires_grad = True
 
 
-def unfreeze_for_finetune(model: nn.Module, arch: str, n_blocks: int = 3) -> None:
-    """Phase B: unfreeze the last `n_blocks` feature blocks + the head for fine-tuning
-    (proposal section 2.4 / 3.4.1 -- unfreeze deeper layers, train with a small LR)."""
+def unfreeze_for_finetune(model, arch, n_blocks=3):
+    """Phase B: unfreeze the last n_blocks feature blocks + head."""
     for p in model.parameters():
         p.requires_grad = False
     if arch == "efficientnet_b0":
-        blocks = list(model.features.children())
-        for block in blocks[-n_blocks:]:
+        for block in list(model.features.children())[-n_blocks:]:
             for p in block.parameters():
                 p.requires_grad = True
         for p in model.classifier.parameters():
             p.requires_grad = True
     elif arch == "resnet50":
-        stages = [model.layer2, model.layer3, model.layer4]
-        for stage in stages[-n_blocks:]:
+        for stage in [model.layer2, model.layer3, model.layer4][-n_blocks:]:
             for p in stage.parameters():
                 p.requires_grad = True
         for p in model.fc.parameters():
             p.requires_grad = True
-    else:
-        raise ValueError(f"Unknown arch: {arch}")
-
-
-def trainable_param_count(model: nn.Module) -> tuple[int, int]:
-    total = sum(p.numel() for p in model.parameters())
-    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    return trainable, total
-
-
-def get_last_conv_layer(model: nn.Module, arch: str) -> nn.Module:
-    """Returns the last convolutional layer, used as the Grad-CAM target layer."""
-    if arch == "efficientnet_b0":
-        return model.features[-1]
-    if arch == "resnet50":
-        return model.layer4[-1]
-    raise ValueError(f"Unknown arch: {arch}")

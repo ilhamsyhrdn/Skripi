@@ -1,0 +1,17 @@
+{
+  "final_ensemble_config": "ResNet50 (5-fold)",
+  "final_metrics": {
+    "accuracy": 0.7893660531697342,
+    "macro_f1": 0.7177007707739415,
+    "cancer_recall": 0.8006430868167203,
+    "benign_recall": 0.5588235294117647,
+    "roc_auc": 0.9195608409234373
+  },
+  "per_class_auc": {
+    "Benign": 0.8628615341623586,
+    "Malignant": 0.9411196213736045,
+    "Normal": 0.9547013672343487
+  },
+  "n_test": 489,
+  "n_misclassified": 103
+}

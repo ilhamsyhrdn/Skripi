@@ -7,7 +7,10 @@ Kodingan/.venv/
 *.pyc
 
 # Checkpoint model terlatih (besar, bisa direproduksi ulang lewat src/training/train_cv.py)
-Kodingan/outputs/models/*.pt
+Kodingan/outputs/models*/*.pt
+Kodingan/outputs/reports/*.npz
+Kodingan/outputs/reports/*.npy
+Kodingan/outputs/reports/*.pkl
 
 # Cache & log yang bisa dibuat ulang / tidak perlu di-diff
 Kodingan/outputs/manifests/_fingerprint_cache.csv
@@ -15,3 +18,9 @@ Kodingan/outputs/logs/*.log
 
 # Streamlit local state
 .streamlit/
+
+# Berkas kunci sementara Microsoft Office
+~$*
+
+# Pratinjau PDF hasil ekspor (dibuat ulang dari .docx)
+Naskah Skripsi/Skripsi_Preview.pdf

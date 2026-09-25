@@ -1,0 +1,18 @@
+{
+  "accuracy": 1.0,
+  "n_test": 376,
+  "per_class": {
+    "Bukan_Lung_CT": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 188
+    },
+    "Lung_CT": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 188
+    }
+  }
+}

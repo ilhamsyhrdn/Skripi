@@ -1,0 +1,42 @@
+Held-out test: 188 images
+Loaded 10 models: ['efficientnet_b0_fold0', 'efficientnet_b0_fold1', 'efficientnet_b0_fold2', 'efficientnet_b0_fold3', 'efficientnet_b0_fold4', 'resnet50_fold0', 'resnet50_fold1', 'resnet50_fold2', 'resnet50_fold3', 'resnet50_fold4']
+Loading test images into memory...
+  efficientnet_b0_fold0: {'accuracy': 0.6542553191489362, 'macro_f1': 0.6205671678684811, 'cancer_recall': 0.7083333333333334, 'benign_recall': 0.41025641025641024, 'roc_auc': 0.8103909108233918}
+  efficientnet_b0_fold1: {'accuracy': 0.6382978723404256, 'macro_f1': 0.5925987347214544, 'cancer_recall': 0.7222222222222222, 'benign_recall': 0.3076923076923077, 'roc_auc': 0.7989859936313305}
+  efficientnet_b0_fold2: {'accuracy': 0.6702127659574468, 'macro_f1': 0.6523260776781904, 'cancer_recall': 0.6388888888888888, 'benign_recall': 0.5897435897435898, 'roc_auc': 0.8201017968722204}
+  efficientnet_b0_fold3: {'accuracy': 0.648936170212766, 'macro_f1': 0.6326371128161409, 'cancer_recall': 0.5833333333333334, 'benign_recall': 0.5897435897435898, 'roc_auc': 0.8078341624757385}
+  efficientnet_b0_fold4: {'accuracy': 0.6223404255319149, 'macro_f1': 0.6003740695021135, 'cancer_recall': 0.5833333333333334, 'benign_recall': 0.46153846153846156, 'roc_auc': 0.804492922984013}
+  resnet50_fold0: {'accuracy': 0.6542553191489362, 'macro_f1': 0.6299439297369517, 'cancer_recall': 0.6527777777777778, 'benign_recall': 0.48717948717948717, 'roc_auc': 0.8149287533110722}
+  resnet50_fold1: {'accuracy': 0.648936170212766, 'macro_f1': 0.6005451134473115, 'cancer_recall': 0.8055555555555556, 'benign_recall': 0.3076923076923077, 'roc_auc': 0.8186726140831094}
+  resnet50_fold2: {'accuracy': 0.6648936170212766, 'macro_f1': 0.6452215001229745, 'cancer_recall': 0.625, 'benign_recall': 0.5641025641025641, 'roc_auc': 0.8268245554102416}
+  resnet50_fold3: {'accuracy': 0.601063829787234, 'macro_f1': 0.5936187477596784, 'cancer_recall': 0.4861111111111111, 'benign_recall': 0.6153846153846154, 'roc_auc': 0.8049064274475058}
+  resnet50_fold4: {'accuracy': 0.6276595744680851, 'macro_f1': 0.6032689826979091, 'cancer_recall': 0.5833333333333334, 'benign_recall': 0.46153846153846156, 'roc_auc': 0.8029826217962645}
+  EfficientNet-B0 (5-fold): {'accuracy': 0.6648936170212766, 'macro_f1': 0.6441024380425121, 'cancer_recall': 0.6527777777777778, 'benign_recall': 0.5384615384615384, 'roc_auc': 0.8120815709192243}
+  ResNet50 (5-fold): {'accuracy': 0.6382978723404256, 'macro_f1': 0.6220205045022563, 'cancer_recall': 0.5694444444444444, 'benign_recall': 0.5641025641025641, 'roc_auc': 0.8182311419264671}
+  Ensemble 10-model (bobot setara): {'accuracy': 0.6648936170212766, 'macro_f1': 0.6456471935853378, 'cancer_recall': 0.6388888888888888, 'benign_recall': 0.5641025641025641, 'roc_auc': 0.8190635106568918}
+  Ensemble 10-model (bobot tertimbang): {'accuracy': 0.6648936170212766, 'macro_f1': 0.6456471935853378, 'cancer_recall': 0.6388888888888888, 'benign_recall': 0.5641025641025641, 'roc_auc': 0.8183476953943859}
+
+Final ensemble selected: Ensemble 10-model (bobot tertimbang)
+       class  support  precision    recall        f1
+0     Benign       39   0.379310  0.564103  0.453608
+1  Malignant       72   0.638889  0.638889  0.638889
+2     Normal       77   0.982759  0.740260  0.844444
+
+=== SUMMARY ===
+{
+  "final_ensemble_config": "Ensemble 10-model (bobot tertimbang)",
+  "final_metrics": {
+    "accuracy": 0.6648936170212766,
+    "macro_f1": 0.6456471935853378,
+    "cancer_recall": 0.6388888888888888,
+    "benign_recall": 0.5641025641025641,
+    "roc_auc": 0.8183476953943859
+  },
+  "per_class_auc": {
+    "Benign": 0.7451385303734297,
+    "Malignant": 0.8130986590038314,
+    "Normal": 0.8968058968058968
+  },
+  "n_test": 188,
+  "n_misclassified": 63
+}

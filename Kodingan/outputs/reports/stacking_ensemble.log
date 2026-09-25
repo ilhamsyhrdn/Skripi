@@ -1,0 +1,24 @@
+Building out-of-fold meta-features for the meta-learner...
+  fold 0: 483 out-of-fold samples
+  fold 1: 482 out-of-fold samples
+  fold 2: 483 out-of-fold samples
+  fold 3: 483 out-of-fold samples
+  fold 4: 482 out-of-fold samples
+Total meta-training samples: 2413
+Meta-learner trained.
+
+Applying stacking ensemble to held-out test set...
+  fold 0 done
+  fold 1 done
+  fold 2 done
+  fold 3 done
+  fold 4 done
+[Stacking] t=0.50  acc=0.822  macroF1=0.699  cancerRecall=0.915  cancerPrecision=0.878
+[Stacking] t=0.40  acc=0.816  macroF1=0.668  cancerRecall=0.933  cancerPrecision=0.858
+[Stacking] t=0.35  acc=0.814  macroF1=0.656  cancerRecall=0.942  cancerPrecision=0.849
+[Stacking] t=0.30  acc=0.816  macroF1=0.652  cancerRecall=0.951  cancerPrecision=0.844
+[Stacking] t=0.25  acc=0.807  macroF1=0.621  cancerRecall=0.954  cancerPrecision=0.828
+[Stacking] t=0.20  acc=0.784  macroF1=0.566  cancerRecall=0.960  cancerPrecision=0.784
+[Stacking] t=0.15  acc=0.764  macroF1=0.523  cancerRecall=0.960  cancerPrecision=0.763
+
+Saved: D:\skripsi\Kodingan\outputs\reports\stacking_threshold_sweep_combined.csv
