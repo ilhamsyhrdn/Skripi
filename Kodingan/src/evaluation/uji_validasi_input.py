@@ -9,9 +9,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -56,30 +53,28 @@ def main():
                      "sesuai": benar, "path": str(p)})
 
     df = pd.DataFrame(rows)
-    df.drop(columns=["path"]).to_csv(OUT_REP / "uji_validasi_input.csv", index=False)
     n_ok = int(df.sesuai.sum())
     print(f"benar {n_ok}/{len(df)}  ({n_ok/len(df)*100:.1f}%)")
     print(df.drop(columns=["path"]).to_string(index=False))
 
-    # grid 4x5: tiap citra diberi keputusan gerbang di atasnya
-    fig, axes = plt.subplots(4, 5, figsize=(11.5, 9.6))
-    for ax, r in zip(axes.ravel(), rows):
+    # Tiap citra disimpan tersendiri karena naskah menyajikan hasil uji ini
+    # sebagai tabel satu baris per citra (No, Gambar, Kategori, Output), bukan
+    # sebagai satu gambar kisi.
+    dir_thumb = OUT_FIG / "validasi_input"
+    dir_thumb.mkdir(parents=True, exist_ok=True)
+    for f in dir_thumb.glob("vi_*.png"):
+        f.unlink()
+    thumbs = []
+    for k, r in enumerate(rows, start=1):
         with Image.open(r["path"]) as im:
-            ax.imshow(im.convert("RGB"))
-        ax.axis("off")
-        ok = r["sesuai"]
-        ax.set_title(f"{r['keputusan']}\n({r['prob_ct']*100:.1f}% CT paru)",
-                     fontsize=8, color="#2a7f3e" if ok else "#b3202c", pad=4)
-        for s in ax.spines.values():
-            s.set_visible(False)
-        ax.add_patch(plt.Rectangle((0, 0), 1, 1, transform=ax.transAxes, fill=False,
-                                   edgecolor="#2a7f3e" if ok else "#b3202c", linewidth=1.6))
-    fig.tight_layout(pad=0.6)
-    fig.savefig(OUT_FIG / "gambar_4_12_uji_validasi_input.png", dpi=200,
-                bbox_inches="tight", facecolor="white")
-    plt.close(fig)
-    print("\nTersimpan: gambar_4_12_uji_validasi_input.png")
-
+            im = im.convert("RGB")
+            im.thumbnail((420, 420))
+            nama = f"vi_{k:02d}.png"
+            im.save(dir_thumb / nama)
+        thumbs.append(nama)
+    df["thumbnail"] = thumbs
+    df.to_csv(OUT_REP / "uji_validasi_input.csv", index=False)
+    print(f"\nTersimpan: uji_validasi_input.csv dan {len(thumbs)} citra di {dir_thumb.name}/")
 
 if __name__ == "__main__":
     main()

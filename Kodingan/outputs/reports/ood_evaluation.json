@@ -1,6 +1,16 @@
 {
   "accuracy": 1.0,
   "n_test": 382,
+  "confusion_matrix": [
+    [
+      191,
+      0
+    ],
+    [
+      0,
+      191
+    ]
+  ],
   "per_class": {
     "Bukan_Lung_CT": {
       "precision": 1.0,

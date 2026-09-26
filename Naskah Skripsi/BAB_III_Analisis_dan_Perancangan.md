@@ -10,7 +10,7 @@ Penelitian ini dirancang sebagai rangkaian eksperimen bertahap, bukan satu kali 
 
 ![Gambar 3.1 Diagram Alur Penelitian](Gambar/Gambar_3.1_Diagram_Alur_Penelitian.png)
 
-*Gambar 3.1 Diagram Alur Penelitian*
+Gambar 3.1 Diagram Alur Penelitian
 
 Rincian tiap tahap adalah sebagai berikut:
 
@@ -55,17 +55,17 @@ Dataset augmentasi sintetis (baris pertama) dikecualikan sepenuhnya karena isiny
 
 Label tiap citra dipetakan dari nama folder ke tiga kelas target lewat pencocokan pola teks (memperhitungkan variasi ejaan seperti "Bengin" dan "Benign" yang sama-sama muncul di dataset yang berbeda), dengan folder bertuliskan subtipe histopatologi tertentu (adenokarsinoma, karsinoma sel skuamosa, karsinoma sel besar) seluruhnya dipetakan ke kelas Malignant.
 
-Audit duplikasi dilakukan lewat dua metode sekaligus: pencocokan **MD5** (mendeteksi berkas yang benar-benar identik bit demi bit) dan **perceptual hash** atau *phash* (mendeteksi citra yang identik secara visual meski berkasnya sedikit berbeda, misalnya akibat kompresi ulang). Citra yang membentuk kelompok duplikat disatukan lewat *union-find*, dan dari tiap kelompok hanya disimpan satu representasi dengan resolusi tertinggi. Kelompok duplikat yang labelnya ternyata tidak konsisten antar salinan (misalnya satu salinan berlabel Benign, salinan lain berlabel Malignant) dikeluarkan seluruhnya dari pool data, karena ketidaksepakatan label semacam ini menandakan kesalahan anotasi pada sumber aslinya yang tidak bisa diselesaikan secara otomatis.
+Audit duplikasi dilakukan lewat dua metode sekaligus: pencocokan **MD5** (mendeteksi berkas yang benar-benar identik bit demi bit) dan ***perceptual hash*** atau *phash* (mendeteksi citra yang identik secara visual meski berkasnya sedikit berbeda, misalnya akibat kompresi ulang). Citra yang membentuk kelompok duplikat disatukan lewat *union-find*, dan dari tiap kelompok hanya disimpan satu representasi dengan resolusi tertinggi. Kelompok duplikat yang labelnya ternyata tidak konsisten antar salinan (misalnya satu salinan berlabel Benign, salinan lain berlabel Malignant) dikeluarkan seluruhnya dari pool data, karena ketidaksepakatan label semacam ini menandakan kesalahan anotasi pada sumber aslinya yang tidak bisa diselesaikan secara otomatis.
 
 Setelah audit, pool data Kaggle final berjumlah **1.627 citra**, dengan distribusi Malignant 1.192, Normal 342, dan Benign 93 citra. Gambar 3.2 dan Gambar 3.3 menunjukkan contoh citra asli (bukan citra staged) untuk tiap kelas dari dua sumber Kaggle yang berbeda, memperlihatkan bahwa karakteristik visual antar sumber (kontras, *framing*, resolusi asli) memang bervariasi -- salah satu alasan audit deduplikasi di atas perlu dilakukan berbasis kandungan citra (*hash*), bukan sekadar nama berkas.
 
 ![Gambar 3.2 Contoh Citra per Kelas -- Dataset Kaggle (Al-Yasriy)](Gambar/Gambar_3.2_Sampel_Kaggle_Al-Yasriy.png)
 
-*Gambar 3.2 Contoh Citra per Kelas pada Dataset Kaggle (The IQ-OTHNCCD Lung Cancer Dataset, Hamdalla F. Al-Yasriy)*
+Gambar 3.2 Contoh Citra per Kelas pada Dataset Kaggle (The IQ-OTHNCCD Lung Cancer Dataset, Hamdalla F. Al-Yasriy)
 
 ![Gambar 3.3 Contoh Citra per Kelas -- Dataset Kaggle (Rathi)](Gambar/Gambar_3.3_Sampel_Kaggle_Rathi.png)
 
-*Gambar 3.3 Contoh Citra per Kelas pada Dataset Kaggle (CT Scan Images for Lung Cancer, Dishan Rathi)*
+Gambar 3.3 Contoh Citra per Kelas pada Dataset Kaggle (CT Scan Images for Lung Cancer, Dishan Rathi)
 
 **2. Dataset LIDC-IDRI**
 
@@ -101,7 +101,7 @@ Pool data LIDC-IDRI final berjumlah **1.018 citra** dari 1.010 pasien, dengan di
 
 ![Gambar 3.4 Contoh Citra Irisan Utuh per Kelas -- LIDC-IDRI](Gambar/Gambar_3.4_Sampel_LIDC.png)
 
-*Gambar 3.4 Contoh Citra Irisan Utuh 512x512 Piksel per Kelas pada Dataset LIDC-IDRI*
+Gambar 3.4 Contoh Citra Irisan Utuh 512x512 Piksel per Kelas pada Dataset LIDC-IDRI
 
 **3. Pemulihan Label pada Citra Kaggle Tanpa Label**
 
@@ -154,26 +154,37 @@ Perangkat lunak inti yang digunakan:
 1. **Python** sebagai bahasa pemrograman utama.
 2. **PyTorch** dan **torchvision** untuk arsitektur model, pelatihan, dan inferensi.
 3. **pydicom** untuk membaca berkas DICOM dan metadatanya.
-4. **imagehash** dan **hashlib** untuk audit duplikasi (perceptual hash dan MD5).
+4. **imagehash** dan **hashlib** untuk audit duplikasi (*perceptual hash* dan MD5).
 5. **scikit-learn** untuk metrik evaluasi, *Stratified Group K-Fold*, dan model regresi logistik pada *ensemble stacking*.
-6. **Streamlit** untuk prototipe aplikasi web.
+6. **Streamlit** untuk prototipe aplikasi *web*.
 7. **Matplotlib** untuk visualisasi kurva pelatihan, *confusion matrix*, dan kurva ROC.
 
-## 3.3 Perancangan Eksperimen Pengukuran Kontribusi
+## 3.3 Perancangan Skenario Eksperimen
 
-Judul penelitian ini menyebut tiga teknik optimasi, yaitu *fine-tuning*, *data augmentation*, dan *ensemble model*. Melaporkan satu angka akhir saja tidak cukup untuk membuktikan bahwa ketiganya benar-benar berkontribusi, sebab angka tersebut tidak menunjukkan berapa banyak yang berasal dari masing-masing teknik. Karena itu, dirancang tiga eksperimen pembanding terkendali, yaitu perbandingan yang hanya mengubah satu faktor dan mempertahankan seluruh faktor lainnya persis sama.
+Judul penelitian ini menyebut tiga teknik optimasi, yaitu *fine-tuning*, *data augmentation*, dan *ensemble model*. Melaporkan satu angka akhir saja tidak cukup untuk membuktikan bahwa ketiganya benar-benar berkontribusi, sebab angka tersebut tidak menunjukkan berapa banyak yang berasal dari masing-masing teknik. Karena itu, dirancang tiga skenario eksperimen pembanding terkendali, yaitu perbandingan yang hanya mengubah satu faktor dan mempertahankan seluruh faktor lainnya persis sama, ditambah satu skenario untuk model validasi input pada prototipe aplikasi. Keempat skenario tersebut diuraikan pada sub-bab berikut.
 
-1. **Pengukuran kontribusi *fine-tuning*.** Macro-F1 validasi terbaik yang dicapai pada fase A (*backbone* beku, hanya lapisan klasifikasi yang dilatih) dibandingkan dengan macro-F1 validasi terbaik pada fase B (tiga blok terakhir *backbone* ikut dilatih). Karena kedua fase dijalankan berurutan pada model dan pembagian data yang sama, selisihnya dapat diatribusikan langsung pada *fine-tuning*.
+### 3.3.1 Skenario Pengukuran Kontribusi *Fine-Tuning*
 
-2. **Pengukuran kontribusi *data augmentation*.** Kesepuluh model dilatih ulang dari awal sebanyak dua kali dengan pipeline pra-pemrosesan yang identik kecuali pada bagian augmentasinya, sehingga tersedia tiga kelompok model berjumlah tiga puluh model. Kelompok pertama dilatih tanpa augmentasi sama sekali, kelompok kedua memakai augmentasi ringan yang disesuaikan sifat citra CT (hanya pembalikan horizontal dan rotasi 7°, tanpa perubahan kecerahan maupun kontras, tanpa translasi, dan tanpa penskalaan), dan kelompok ketiga memakai augmentasi penuh berupa pembalikan horizontal, transformasi afin (rotasi 15°, translasi 10%, penskalaan 0,90–1,10), serta perubahan kecerahan dan kontras sebesar 0,2. Konfigurasi yang akhirnya dipilih sebagai konfigurasi final adalah kelompok kedua, dengan dasar pemilihan dijelaskan pada Bab IV, Bagian 4.4.3, dan parameternya dicantumkan pada Tabel 3.3. Ketiganya dievaluasi pada *held-out test set* yang sama lewat alur *ensemble* yang sama pula, lalu selisihnya diuji kebermaknaannya memakai uji McNemar.
+Macro-F1 validasi terbaik yang dicapai pada fase A (*backbone* beku, hanya lapisan klasifikasi yang dilatih) dibandingkan dengan macro-F1 validasi terbaik pada fase B (tiga blok terakhir *backbone* ikut dilatih) untuk tiap model dari kesepuluh model. Karena kedua fase dijalankan berurutan pada model dan pembagian data yang sama, selisihnya dapat diatribusikan langsung pada *fine-tuning*. Skenario ini tidak memerlukan pelatihan tambahan, sebab riwayat macro-F1 kedua fase tercatat pada setiap *epoch* selama pelatihan berlangsung.
 
-3. **Pengukuran kontribusi *ensemble model*.** Performa model tunggal dibandingkan secara berjenjang dengan *ensemble soft-voting* (bobot setara dan bobot tertimbang) serta *ensemble stacking* berbasis *meta-learner*, seluruhnya pada *held-out test set* yang sama dan tanpa pelatihan ulang model dasar.
+### 3.3.2 Skenario Pengukuran Kontribusi *Data Augmentation*
+
+Kesepuluh model dilatih ulang dari awal sebanyak dua kali dengan *pipeline* pra-pemrosesan yang identik kecuali pada bagian augmentasinya, sehingga tersedia tiga kelompok model berjumlah tiga puluh model. Kelompok pertama dilatih tanpa augmentasi sama sekali, kelompok kedua memakai augmentasi ringan yang disesuaikan sifat citra CT (hanya pembalikan horizontal dan rotasi 7°, tanpa perubahan kecerahan maupun kontras, tanpa translasi, dan tanpa penskalaan), dan kelompok ketiga memakai augmentasi penuh berupa pembalikan horizontal, transformasi afin (rotasi 15°, translasi 10%, penskalaan 0,90–1,10), serta perubahan kecerahan dan kontras sebesar 0,2. Ketiganya dievaluasi pada *held-out test set* yang sama lewat alur *ensemble* yang sama pula, lalu selisihnya diuji kebermaknaannya memakai uji McNemar. Konfigurasi yang akhirnya dipilih sebagai konfigurasi final adalah kelompok kedua, dengan dasar pemilihan dijelaskan pada Bab IV, Bagian 4.4.3, dan parameternya dicantumkan pada Tabel 3.3.
 
 Pemilihan augmentasi ringan pada kelompok kedua berangkat dari sifat citra CT itu sendiri, bukan sekadar memperkecil parameter secara acak. Tingkat keabuan pada citra CT berasal dari *Hounsfield Unit* yang merupakan besaran kerapatan jaringan terkalibrasi, sehingga perubahan kecerahan dan kontras mengubah keterangan jaringan yang justru menjadi dasar pembedaan kelas. Sementara itu nodul berukuran beberapa milimeter hanya menempati bagian sangat kecil dari irisan 512×512 piksel, sehingga translasi dan penskalaan berpeluang menggeser atau melarutkan objek yang harus dikenali.
 
-Sebagai pelengkap, penyesuaian ambang keputusan kelas Malignant juga diuji pada konfigurasi *ensemble* terbaik, untuk memeriksa titik keseimbangan antara akurasi keseluruhan dan *cancer recall*. Seluruh perbandingan dilaporkan apa adanya pada Bab IV, termasuk bagian yang hasilnya tidak sesuai harapan.
+### 3.3.3 Skenario Pengukuran Kontribusi *Ensemble Model*
 
-## 3.4 Perancangan Model Deep Learning
+Performa model tunggal dibandingkan secara berjenjang dengan *ensemble soft-voting* (bobot setara dan bobot tertimbang) serta *ensemble stacking* berbasis *meta-learner*, seluruhnya pada *held-out test set* yang sama dan tanpa pelatihan ulang model dasar. Sebagai pelengkap, penyesuaian ambang keputusan kelas Malignant juga diuji pada konfigurasi *ensemble* terbaik, untuk memeriksa titik keseimbangan antara akurasi keseluruhan dan *cancer recall*. Konfigurasi dengan performa terbaik pada skenario ini kemudian diintegrasikan ke dalam prototipe aplikasi berbasis *web*. Seluruh perbandingan dilaporkan apa adanya pada Bab IV, termasuk bagian yang hasilnya tidak sesuai harapan.
+
+### 3.3.4 Skenario Pengujian Model Validasi Input Citra dengan Dataset COCO
+
+Skenario ini bertujuan mengevaluasi kinerja model klasifikasi biner yang difungsikan sebagai mekanisme validasi awal sebelum citra masukan diproses oleh model klasifikasi utama. Arsitektur EfficientNet-B0 yang lapisan klasifikasinya diubah menjadi dua keluaran dilatih khusus untuk membedakan kelas "Citra CT Paru" dari kelas "Bukan Citra CT Paru". Kelas "Citra CT Paru" diwakili seluruh 1.018 citra CT LIDC-IDRI hasil penyaringan tag `Modality`, sedangkan kelas "Bukan Citra CT Paru" diwakili citra COCO val2017 yang diambil acak dengan jumlah yang sama, sehingga kedua kelas berimbang dan model tidak condong ke salah satunya.
+
+Berbeda dengan model utama yang dievaluasi memakai *Stratified Group K-Fold*, model penyaring ini cukup dievaluasi dengan metode *hold-out*, mengingat tingkat kesulitan membedakan kedua kelasnya jauh lebih rendah daripada membedakan jenis temuan pada citra CT. Pembagiannya mengikuti eksperimen utama, yaitu citra LIDC-IDRI pada *held-out test set* utama menjadi data uji model ini, sedangkan sisanya dibagi 90:10 menjadi data latih dan data validasi. Selain evaluasi pada data uji tersebut, model ini juga diuji langsung melalui aplikasi memakai 12 citra CT paru-paru dan 8 citra COCO yang belum pernah dilihatnya.
+
+
+## 3.4 Perancangan Model *Deep Learning*
 
 Perancangan model mencakup dua hal yang saling terkait, yaitu bentuk arsitektur jaringan yang dipakai dan nilai *hyperparameter* yang mengatur jalannya pelatihan. Keduanya ditetapkan seragam untuk seluruh model dan seluruh lipatan, sehingga perbedaan hasil antar konfigurasi pada Bab IV dapat diatribusikan pada teknik yang sedang diuji, bukan pada perbedaan pengaturan pelatihan. Rincian arsitektur dijabarkan pada sub-bab 3.4.1, sedangkan konfigurasi *hyperparameter* beserta alasan pemilihan tiap nilainya disajikan pada sub-bab 3.4.2.
 
@@ -186,31 +197,31 @@ Kedua arsitektur (EfficientNet-B0 dan ResNet50) memakai bobot *pre-trained* Imag
 
 `Early stopping` diterapkan dengan *patience* 6 *epoch* terhadap macro-F1 validasi, dan bobot terbaik disimpan lintas kedua fase (bukan hanya dari fase B), sehingga bila performa terbaik justru tercapai sebelum *fine-tuning* dimulai, bobot itulah yang dipakai.
 
-### 3.4.2 Konfigurasi Hyperparameter
+### 3.4.2 Konfigurasi *Hyperparameter* Pelatihan
 
 Tabel 3.3 merangkum konfigurasi *hyperparameter* pelatihan.
 
-Tabel 3.3 Konfigurasi Hyperparameter Pelatihan
+Tabel 3.3 Konfigurasi *Hyperparameter* Pelatihan
 
 | Parameter | Nilai |
 |---|---|
-| Optimizer | Adam |
-| Learning Rate (Fase A) | 1e-3 |
-| Learning Rate (Fase B) | 1e-5 |
-| Loss Function | CrossEntropyLoss (*class-weighted*) |
-| Scheduler | ReduceLROnPlateau (mode maks. macro-F1, faktor 0,5, *patience* 3) |
-| Early Stopping | *Patience* 6 *epoch* (macro-F1 validasi) |
-| Epoch Maksimum | 12 (Fase A) + 25 (Fase B) |
-| Regularisasi | Dropout p = 0,3 sebelum lapisan klasifikasi |
+| *Optimizer* | Adam |
+| *Learning Rate* (Fase A) | 1e-3 |
+| *Learning Rate* (Fase B) | 1e-5 |
+| *Loss* Function | CrossEntropyLoss (*class-weighted*) |
+| *Scheduler* | ReduceLROnPlateau (mode maks. macro-F1, faktor 0,5, *patience* 3) |
+| *Early Stopping* | *Patience* 6 *epoch* (macro-F1 validasi) |
+| *Epoch* Maksimum | 12 (Fase A) + 25 (Fase B) |
+| Regularisasi | *Dropout* p = 0,3 sebelum lapisan klasifikasi |
 | Augmentasi (konfigurasi final) | RandomHorizontalFlip dan RandomRotation 7°, tanpa ColorJitter, tanpa translasi, tanpa penskalaan (data latih saja) |
 | Ukuran Citra Input | 512×512 piksel |
-| Jumlah Fold | 5 (Stratified Group K-Fold) |
-| Porsi Held-Out Test Set | 18% grup |
+| Jumlah *Fold* | 5 (Stratified Group K-Fold) |
+| Porsi *Held-Out Test Set* | 18% grup |
 | Random Seed | 42 |
 
 ## 3.5 Perancangan Prototipe Aplikasi
 
-Prototipe aplikasi dibangun dengan Streamlit untuk mendemonstrasikan model final secara interaktif, terdiri dari enam laman: Beranda, Prediksi Citra CT, Perbandingan Model, Kurva Training, Audit Dataset, dan Tentang & Metodologi.
+Prototipe aplikasi dibangun dengan Streamlit untuk mendemonstrasikan model final secara interaktif, terdiri dari enam laman: Beranda, Prediksi Citra CT, Perbandingan Model, Kurva *Training*, Audit Dataset, dan Tentang & Metodologi.
 
 ### 3.5.1 Rancangan Antarmuka Aplikasi
 
@@ -220,22 +231,22 @@ Komponen utama pada laman Prediksi Citra CT meliputi:
 2. **Area Pratinjau Citra**, menampilkan citra yang diunggah agar pengguna dapat memastikan masukannya sudah benar sebelum diproses.
 3. **Lapisan Validasi Input**, yang menjalankan model klasifikasi biner (CT paru-paru versus bukan) dan menghentikan proses bila citra berada di luar domain, disertai pesan penolakan beserta tingkat keyakinannya.
 4. **Panel Hasil Prediksi**, menampilkan label kelas (Malignant/Benign/Normal), probabilitas tiap kelas dari *ensemble stacking*, dan pengaturan ambang keputusan yang dapat digeser pengguna.
-5. **Panel Rincian Anggota Ensemble**, menampilkan probabilitas keluaran tiap model anggota sebelum digabungkan *meta-learner*, sehingga kontribusi masing-masing model terlihat.
-6. **Panel Rincian Meta-Learner**, menampilkan keluaran *meta-learner* pada tiap pasangan *fold* sebelum kelimanya dirata-ratakan, sehingga tahap penggabungan tingkat kedua ikut dapat ditelusuri.
+5. **Panel Rincian Anggota *Ensemble***, menampilkan probabilitas keluaran tiap model anggota sebelum digabungkan *meta-learner*, sehingga kontribusi masing-masing model terlihat.
+6. **Panel Rincian *Meta-Learner***, menampilkan keluaran *meta-learner* pada tiap pasangan *fold* sebelum kelimanya dirata-ratakan, sehingga tahap penggabungan tingkat kedua ikut dapat ditelusuri.
 
 ### 3.5.2 Use Case Diagram Aplikasi
 
-Terdapat satu aktor (*User*) dengan use case utama: mengunggah citra, melihat pratinjau, menjalankan klasifikasi yang didahului validasi input oleh sistem, menampilkan hasil prediksi beserta rincian probabilitas tiap anggota ensemble, dan menyesuaikan ambang keputusan. Gambar 3.5 menunjukkan diagram *use case* aplikasi secara lengkap, termasuk relasi `<<include>>` antar use case yang menunjukkan ketergantungan urutan eksekusinya.
+Terdapat satu aktor (*User*) dengan use case utama: mengunggah citra, melihat pratinjau, menjalankan klasifikasi yang didahului validasi input oleh sistem, menampilkan hasil prediksi beserta rincian probabilitas tiap anggota *ensemble*, dan menyesuaikan ambang keputusan. Gambar 3.5 menunjukkan diagram *use case* aplikasi secara lengkap, termasuk relasi `<<include>>` antar use case yang menunjukkan ketergantungan urutan eksekusinya.
 
 ![Gambar 3.5 Use Case Diagram Aplikasi](Gambar/Gambar_3.5_Use_Case_Diagram.png)
 
-*Gambar 3.5 Use Case Diagram Aplikasi*
+Gambar 3.5 Use Case Diagram Aplikasi
 
-## 3.6 Pengujian Fungsionalitas Aplikasi (Black Box Testing)
+## 3.6 Pengujian Fungsionalitas Aplikasi (*Black Box Testing*)
 
 Tabel 3.4 merangkum skenario pengujian fungsionalitas yang akan dijalankan pada Bab IV.
 
-Tabel 3.4 Skenario Black Box Testing
+Tabel 3.4 Skenario *Black Box Testing*
 
 | No | Fitur | Skenario Pengujian | Masukan | Hasil yang Diharapkan |
 |---:|---|---|---|---|
@@ -245,6 +256,6 @@ Tabel 3.4 Skenario Black Box Testing
 | 4 | Validasi Input (Citra CT) | Mengunggah citra CT paru-paru | Satu citra CT paru-paru | Diterima dan diteruskan ke klasifikasi |
 | 5 | Validasi Input (Bukan CT) | Mengunggah citra objek umum | Satu citra dari dataset COCO | Ditolak sebelum klasifikasi dijalankan |
 | 6 | Panel Hasil Prediksi | Menjalankan klasifikasi pada citra valid | Citra CT yang tervalidasi | Label kelas dan probabilitas tampil |
-| 7 | Slider Ambang Keputusan | Menggeser ambang dari 0,50 ke 0,30 | Ambang keputusan baru | Prediksi ter-*update* konsisten |
-| 8 | Panel Rincian Anggota Ensemble | Membuka rincian probabilitas tiap model | Selesainya proses inferensi | Probabilitas kesepuluh model tampil |
-| 9 | Panel Rincian Meta-Learner | Membuka rincian keluaran *meta-learner* per pasangan *fold* | Selesainya proses inferensi | Probabilitas kelima pasangan *fold* tampil |
+| 7 | *Slider* Ambang Keputusan | Menggeser ambang dari 0,50 ke 0,30 | Ambang keputusan baru | Prediksi ter-*update* konsisten |
+| 8 | Panel Rincian Anggota *Ensemble* | Membuka rincian probabilitas tiap model | Selesainya proses inferensi | Probabilitas kesepuluh model tampil |
+| 9 | Panel Rincian *Meta-Learner* | Membuka rincian keluaran *meta-learner* per pasangan *fold* | Selesainya proses inferensi | Probabilitas kelima pasangan *fold* tampil |

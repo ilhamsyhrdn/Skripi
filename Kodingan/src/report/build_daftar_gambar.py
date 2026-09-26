@@ -20,7 +20,7 @@ BAB = ["BAB_I_Pendahuluan.md", "BAB_II_Tinjauan_Pustaka.md",
        "BAB_V_Kesimpulan_dan_Saran.md"]
 OUT = NASKAH / "DAFTAR_GAMBAR.md"
 
-POLA_GAMBAR = re.compile(r"^\*(Gambar \d+\.\d+ .+?)\*\s*$")
+POLA_GAMBAR = re.compile(r"^\*?(Gambar \d+\.\d+ .+?)\*?\s*$")
 POLA_TABEL = re.compile(r"^(Tabel \d+\.\d+ .+?)\s*$")
 
 
@@ -40,7 +40,8 @@ def kumpulkan():
         for i, mentah in enumerate(baris):
             b = mentah.strip()
             m = POLA_GAMBAR.match(b)
-            if m:
+            sebelumnya = next((x.strip() for x in reversed(baris[:i]) if x.strip()), "")
+            if m and sebelumnya.startswith("!["):
                 gambar.setdefault(m.group(1).split()[1], m.group(1))
                 continue
             m = POLA_TABEL.match(b)

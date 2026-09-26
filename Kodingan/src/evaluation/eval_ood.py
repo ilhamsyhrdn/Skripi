@@ -11,7 +11,6 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import torch
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
 from torch.utils.data import DataLoader
@@ -50,17 +49,29 @@ def main():
     prec, rec, f1, support = precision_recall_fscore_support(y_true, y_pred, labels=[0, 1], zero_division=0)
     cm = confusion_matrix(y_true, y_pred, labels=[0, 1])
 
-    FIG_DIR.mkdir(parents=True, exist_ok=True)
-    plt.figure(figsize=(4.5, 4))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=OOD_CLASS_NAMES, yticklabels=OOD_CLASS_NAMES)
-    plt.xlabel("Prediksi"); plt.ylabel("Label Sebenarnya")
-    plt.title("Confusion Matrix - Modul Validasi Input")
-    plt.tight_layout()
-    plt.savefig(FIG_DIR / "ood_confusion_matrix.png", dpi=150)
-    plt.close()
+    # gaya disamakan dengan confusion matrix klasifikasi utama (Gambar 4.5)
+    label = ["Bukan CT paru", "CT paru"]
+    fig, ax = plt.subplots(figsize=(4.2, 3.7))
+    im = ax.imshow(cm, cmap="Blues", vmin=0, vmax=cm.max())
+    ax.set_xticks(range(2), label, fontsize=9)
+    ax.set_yticks(range(2), label, fontsize=9, rotation=90, va="center")
+    ax.set_xlabel("Prediksi model", fontsize=9.5, labelpad=6)
+    ax.set_ylabel("Label sebenarnya", fontsize=9.5, labelpad=6)
+    for i in range(2):
+        for j in range(2):
+            ax.text(j, i, f"{cm[i, j]}", ha="center", va="center", fontsize=11,
+                    color="white" if cm[i, j] > cm.max() * 0.55 else "#111111")
+    cb = fig.colorbar(im, fraction=0.046, pad=0.04)
+    cb.ax.tick_params(labelsize=8)
+    fig.tight_layout(pad=0.4)
+    (FIG_DIR / "final").mkdir(parents=True, exist_ok=True)
+    fig.savefig(FIG_DIR / "final" / "gambar_4_cm_validasi_biner.png", dpi=200,
+                bbox_inches="tight", facecolor="white")
+    plt.close(fig)
 
     summary = {
         "accuracy": acc, "n_test": int(len(test_df)),
+        "confusion_matrix": cm.tolist(),
         "per_class": {OOD_CLASS_NAMES[i]: {"precision": prec[i], "recall": rec[i], "f1": f1[i], "support": int(support[i])} for i in range(2)},
     }
     with open(REPORT_DIR / "ood_evaluation.json", "w") as f:

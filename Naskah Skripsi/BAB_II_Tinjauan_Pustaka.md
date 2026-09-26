@@ -2,19 +2,19 @@
 
 # TINJAUAN PUSTAKA
 
-Bab ini membahas landasan teori yang menjadi dasar penelitian, mencakup kanker paru-paru dan citra CT, *Deep Learning* dan CNN, *transfer learning*, arsitektur EfficientNet dan ResNet, teknik optimisasi dan regularisasi, dataset LIDC-IDRI beserta metode penanganan labelnya, perangkat lunak yang digunakan, penelitian terkait, dan metode evaluasi sistem.
+Bab ini membahas landasan teori yang menjadi dasar penelitian, mencakup kanker paru-paru dan citra CT, *Deep Learning* dan CNN, *transfer learning*, arsitektur EfficientNet dan ResNet, teknik optimisasi dan regularisasi, dataset LIDC-IDRI beserta metode penanganan labelnya, perangkat lunak yang digunakan, penelitian terkait, serta metode evaluasi dan pengujian sistem, termasuk *Black Box Testing*.
 
 ## 2.1 Kanker Paru-Paru
 
 Kanker paru-paru muncul akibat pertumbuhan sel abnormal yang tidak terkendali pada jaringan paru, yang secara histopatologi umumnya dibagi menjadi dua kelompok besar: *Non-Small Cell Lung Cancer* (NSCLC), yang mencakup sekitar 80–85% kasus dan meliputi subtipe adenokarsinoma, karsinoma sel skuamosa, dan karsinoma sel besar; serta *Small Cell Lung Cancer* (SCLC) yang lebih agresif namun lebih jarang ditemukan. Nodul paru pada citra CT tidak selalu berarti kanker. Banyak nodul jinak (*benign*) yang menyerupai nodul ganas secara visual, seperti granuloma atau hamartoma, sehingga pembedaan jinak-ganas murni dari citra tanpa biopsi tetap menyisakan ketidakpastian bahkan bagi radiolog berpengalaman. Prognosis kanker paru-paru sangat bergantung pada stadium saat terdeteksi: tingkat kelangsungan hidup lima tahun untuk kasus yang ditemukan pada stadium lokal jauh lebih tinggi dibandingkan stadium metastasis, yang menjadi alasan utama mengapa deteksi dini lewat skrining CT dosis rendah terus didorong dalam praktik klinis.
 
-## 2.2 Computed Tomography (CT) pada Paru-Paru
+## 2.2 *Computed Tomography* (CT) pada Paru-Paru
 
 *Computed Tomography* (CT) menghasilkan citra penampang lintang tubuh dengan menggabungkan ratusan pengukuran atenuasi sinar-X dari berbagai sudut. Nilai atenuasi setiap voksel dinyatakan dalam satuan *Hounsfield Unit* (HU), sebuah skala terstandardisasi di mana udara bernilai −1000 HU dan air bernilai 0 HU. Jaringan paru yang normalnya berisi udara memiliki nilai HU sangat rendah, sedangkan nodul padat, pembuluh darah, dan struktur tulang memiliki nilai HU jauh lebih tinggi. Karena rentang nilai HU pada satu irisan CT bisa mencapai ribuan level sementara layar dan mata manusia (maupun kanal warna 8-bit yang lazim dipakai *Deep Learning*) hanya mampu membedakan 256 level abu-abu, diperlukan proses *windowing*: memilih *window level* (titik tengah) dan *window width* (rentang) tertentu, lalu memetakan nilai HU pada rentang tersebut ke skala 0–255. Jendela paru (*lung window*) yang lazim dipakai untuk menonjolkan struktur parenkim dan nodul menggunakan *level* sekitar −600 HU dan *width* sekitar 1500 HU, karena rentang ini mencakup baik jaringan berisi udara (HU sangat negatif) maupun nodul padat (HU mendekati 0 atau positif) dalam satu citra grayscale yang informatif.
 
 Data CT disimpan dalam format DICOM (*Digital Imaging and Communications in Medicine*), yang menyimpan bukan hanya nilai piksel mentah tetapi juga metadata seperti identitas seri pemindaian (*Series Instance UID*), posisi irisan, dan parameter akuisisi. Satu pemeriksaan CT dada dapat terdiri dari satu atau lebih *series*, dan satu *series* dapat memuat puluhan hingga ratusan irisan (*slice*) 2D yang bila ditumpuk membentuk volume 3D.
 
-## 2.3 Deep Learning dan Convolutional Neural Network (CNN)
+## 2.3 *Deep Learning* dan Convolutional Neural Network (CNN)
 
 *Deep Learning* adalah cabang *machine learning* yang mempelajari representasi data lewat jaringan saraf tiruan berlapis banyak. *Convolutional Neural Network* (CNN) adalah arsitektur *Deep Learning* yang dirancang khusus untuk data berstruktur *grid* seperti citra, dengan tiga jenis lapisan utama:
 
@@ -26,9 +26,9 @@ Keunggulan utama CNN dibandingkan pendekatan *machine learning* klasik adalah ke
 
 ![Gambar 2.1 Arsitektur Umum CNN](Gambar/Gambar_2.1_Arsitektur_CNN.png)
 
-*Gambar 2.1 Arsitektur Umum Convolutional Neural Network (CNN)*
+Gambar 2.1 Arsitektur Umum Convolutional Neural Network (CNN)
 
-## 2.4 Transfer Learning
+## 2.4 *Transfer Learning*
 
 Melatih CNN dari nol (*from scratch*) membutuhkan data berlabel dalam jumlah sangat besar agar model tidak sekadar menghafal data latih. Pada domain citra medis, ketersediaan data berlabel jauh lebih terbatas dibandingkan domain citra umum, baik karena biaya anotasi oleh ahli maupun karena batasan privasi pasien. *Transfer learning* mengatasi keterbatasan ini dengan memanfaatkan bobot jaringan yang telah dilatih pada dataset besar seperti ImageNet (lebih dari satu juta citra, seribu kelas objek umum), lalu mengadaptasi bobot tersebut untuk tugas baru yang datanya lebih terbatas.
 
@@ -49,7 +49,7 @@ Dibandingkan arsitektur CNN klasik dengan jumlah parameter setara, EfficientNet-
 
 ![Gambar 2.2 Blok MBConv dengan Squeeze-and-Excitation](Gambar/Gambar_2.2_Blok_MBConv_EfficientNet.png)
 
-*Gambar 2.2 Blok MBConv dengan Squeeze-and-Excitation (EfficientNet-B0)*
+Gambar 2.2 Blok MBConv dengan Squeeze-and-Excitation (EfficientNet-B0)
 
 ## 2.6 Arsitektur ResNet50
 
@@ -59,9 +59,9 @@ Dalam penelitian ini, ResNet50 dipakai berdampingan dengan EfficientNet-B0 khusu
 
 ![Gambar 2.3 Blok Bottleneck Residual ResNet50](Gambar/Gambar_2.3_Blok_Residual_ResNet50.png)
 
-*Gambar 2.3 Blok Bottleneck Residual (ResNet50)*
+Gambar 2.3 Blok Bottleneck Residual (ResNet50)
 
-## 2.7 Optimizer, Fungsi Kerugian, dan Penjadwalan Laju Pembelajaran
+## 2.7 *Optimizer*, Fungsi Kerugian, dan Penjadwalan Laju Pembelajaran
 
 Proses pelatihan CNN pada dasarnya adalah pencarian nilai bobot yang meminimalkan fungsi kerugian (*loss function*) lewat iterasi berulang. Penelitian ini menggunakan komponen berikut:
 
@@ -71,19 +71,19 @@ Proses pelatihan CNN pada dasarnya adalah pencarian nilai bobot yang meminimalka
 
 **ReduceLROnPlateau** adalah metode penjadwalan laju pembelajaran yang memantau metrik validasi (dalam penelitian ini, macro-F1 pada data validasi) dan menurunkan *learning rate* dengan faktor tertentu (0,5) bila metrik tersebut berhenti membaik selama sejumlah *epoch* berturut-turut (*patience*). Mekanisme ini membantu model keluar dari kondisi stagnasi tanpa perlu menebak jadwal penurunan *learning rate* secara manual sejak awal.
 
-**Early Stopping** menghentikan pelatihan secara otomatis bila metrik validasi tidak membaik selama sejumlah *epoch* berturut-turut, dan menyimpan bobot dari *epoch* dengan performa validasi terbaik sepanjang pelatihan (bukan bobot dari *epoch* terakhir), sehingga model akhir yang dipakai bukan model yang sudah mulai *overfitting*.
+***Early Stopping*** menghentikan pelatihan secara otomatis bila metrik validasi tidak membaik selama sejumlah *epoch* berturut-turut, dan menyimpan bobot dari *epoch* dengan performa validasi terbaik sepanjang pelatihan (bukan bobot dari *epoch* terakhir), sehingga model akhir yang dipakai bukan model yang sudah mulai *overfitting*.
 
-## 2.8 Data Augmentation
+## 2.8 *Data Augmentation*
 
 Augmentasi data adalah teknik memperbanyak variasi citra latih secara sintetis lewat transformasi acak yang tidak mengubah label kelasnya, bertujuan menekan risiko *overfitting* pada data latih yang jumlahnya terbatas. Penelitian ini menerapkan augmentasi berupa pembalikan horizontal acak (*random horizontal flip*), transformasi afin acak (rotasi, translasi, dan skala), serta perubahan warna acak (*color jitter*). Seluruh augmentasi ini hanya diterapkan pada data latih, tidak pada data validasi maupun data uji, agar evaluasi tetap mengukur performa pada citra asli yang representatif terhadap kondisi nyata.
 
-## 2.9 Ensemble Model
+## 2.9 *Ensemble Model*
 
-Metode *ensemble* menggabungkan keluaran beberapa model untuk menghasilkan satu prediksi akhir yang diharapkan lebih stabil dan akurat dibandingkan model tunggal manapun, dengan asumsi bahwa kesalahan tiap model bersifat sebagian independen satu sama lain. Penelitian ini menerapkan dua skema ensemble secara bertahap:
+Metode *ensemble* menggabungkan keluaran beberapa model untuk menghasilkan satu prediksi akhir yang diharapkan lebih stabil dan akurat dibandingkan model tunggal manapun, dengan asumsi bahwa kesalahan tiap model bersifat sebagian independen satu sama lain. Penelitian ini menerapkan dua skema *ensemble* secara bertahap:
 
-**Soft-Voting** merata-ratakan probabilitas keluaran (bukan label akhirnya) dari seluruh model anggota ensemble, baik dengan bobot yang sama rata (*equal-weight*) maupun bobot yang disesuaikan menurut performa validasi tiap model (*val-F1-weighted*).
+***Soft-Voting*** merata-ratakan probabilitas keluaran (bukan label akhirnya) dari seluruh model anggota *ensemble*, baik dengan bobot yang sama rata (*equal-weight*) maupun bobot yang disesuaikan menurut performa validasi tiap model (*val-F1-weighted*).
 
-**Ensemble Stacking** melangkah lebih jauh: alih-alih merata-ratakan probabilitas dengan rumus tetap, sebuah model kedua yang lebih sederhana (dalam penelitian ini, regresi logistik multinomial) dilatih untuk mempelajari cara terbaik menggabungkan probabilitas keluaran model-model anggota berdasarkan data yang belum pernah dipakai anggota tersebut untuk berlatih (*out-of-fold*), sehingga kombinasi bobotnya tidak ditentukan lebih dulu secara manual melainkan dipelajari dari data. Pendekatan *stacking* semacam ini sejalan dengan metode yang dilaporkan Noman et al. (2025) pada LungCT-NET, yang juga menggabungkan beberapa model pre-trained lewat lapisan *stacking* untuk klasifikasi kanker paru-paru pada citra CT.
+***Ensemble Stacking*** melangkah lebih jauh: alih-alih merata-ratakan probabilitas dengan rumus tetap, sebuah model kedua yang lebih sederhana (dalam penelitian ini, regresi logistik multinomial) dilatih untuk mempelajari cara terbaik menggabungkan probabilitas keluaran model-model anggota berdasarkan data yang belum pernah dipakai anggota tersebut untuk berlatih (*out-of-fold*), sehingga kombinasi bobotnya tidak ditentukan lebih dulu secara manual melainkan dipelajari dari data. Pendekatan *stacking* semacam ini sejalan dengan metode yang dilaporkan Noman et al. (2025) pada LungCT-NET, yang juga menggabungkan beberapa model *pre-trained* lewat lapisan *stacking* untuk klasifikasi kanker paru-paru pada citra CT.
 
 ## 2.10 Dataset LIDC-IDRI dan Penanganan Label Ambigu
 
@@ -95,7 +95,7 @@ Alih-alih membuang nodul ambigu ini, penelitian ini mengikuti pendekatan yang di
 
 ## 2.11 Perangkat Lunak yang Digunakan
 
-Penelitian ini memakai beberapa perangkat lunak utama untuk memproses data, melatih model, dan menyajikan hasilnya. Bahasa pemrograman intinya adalah Python, yang dipilih karena ekosistem pustaka ilmiahnya matang dan menyediakan dukungan luas untuk komputasi numerik maupun *deep learning*. Pembangunan dan pelatihan arsitektur EfficientNet-B0 serta ResNet50 dijalankan di atas *framework* PyTorch, sedangkan pembacaan berkas DICOM dari LIDC-IDRI ditangani pustaka pydicom. Untuk mendemonstrasikan hasil klasifikasi kepada pengguna, dibangun antarmuka web memakai Streamlit. Penjelasan lebih rinci mengenai masing-masing perangkat lunak tersebut diuraikan pada sub-bab berikut.
+Penelitian ini memakai beberapa perangkat lunak utama untuk memproses data, melatih model, dan menyajikan hasilnya. Bahasa pemrograman intinya adalah Python, yang dipilih karena ekosistem pustaka ilmiahnya matang dan menyediakan dukungan luas untuk komputasi numerik maupun *deep learning*. Pembangunan dan pelatihan arsitektur EfficientNet-B0 serta ResNet50 dijalankan di atas *framework* PyTorch, sedangkan pembacaan berkas DICOM dari LIDC-IDRI ditangani pustaka pydicom. Untuk mendemonstrasikan hasil klasifikasi kepada pengguna, dibangun antarmuka *web* memakai Streamlit. Penjelasan lebih rinci mengenai masing-masing perangkat lunak tersebut diuraikan pada sub-bab berikut.
 
 ### 2.11.1 Python dan PyTorch
 
@@ -107,7 +107,7 @@ Pemrosesan berkas DICOM pada dataset LIDC-IDRI memerlukan pustaka khusus untuk m
 
 ### 2.11.3 Streamlit
 
-Streamlit adalah *framework* Python untuk membangun aplikasi web interaktif langsung dari skrip Python tanpa memerlukan pengembangan *front-end* terpisah, dipakai dalam penelitian ini untuk membangun prototipe aplikasi demonstrasi.
+Streamlit adalah *framework* Python untuk membangun aplikasi *web* interaktif langsung dari skrip Python tanpa memerlukan pengembangan *front-end* terpisah, dipakai dalam penelitian ini untuk membangun prototipe aplikasi demonstrasi.
 
 ## 2.12 Penelitian Terkait
 
@@ -127,9 +127,9 @@ Satu catatan penting dalam membaca Tabel 2.1: akurasi 98,99% yang dilaporkan Nom
 
 ## 2.13 Evaluasi dan Pengujian Sistem
 
-Evaluasi dalam penelitian ini dilakukan pada dua tataran yang berbeda sifatnya. Tataran pertama menilai kemampuan model dalam mempelajari data, memakai *Stratified Group K-Fold Cross Validation* untuk menjaga agar citra dari pasien yang sama tidak pernah tersebar ke dua lipatan sekaligus, disertai sejumlah metrik kuantitatif untuk mengukur performa klasifikasinya. Tataran kedua menilai perilaku sistem pada tahap pengambilan keputusan, yaitu bagaimana ambang keputusan menentukan label akhir dari probabilitas yang dihasilkan model. Ketiga hal tersebut dijabarkan berturut-turut pada sub-bab berikut.
+Evaluasi dalam penelitian ini dilakukan pada tiga tataran yang berbeda sifatnya. Tataran pertama menilai kemampuan model dalam mempelajari data, memakai *Stratified Group K-Fold Cross Validation* untuk menjaga agar citra dari pasien yang sama tidak pernah tersebar ke dua lipatan sekaligus, disertai sejumlah metrik kuantitatif untuk mengukur performa klasifikasinya. Tataran kedua menilai perilaku sistem pada tahap pengambilan keputusan, yaitu bagaimana ambang keputusan menentukan label akhir dari probabilitas yang dihasilkan model. Tataran ketiga menilai prototipe aplikasi sebagai perangkat lunak, yaitu apakah setiap fiturnya berfungsi sesuai spesifikasi ketika digunakan. Keempat hal tersebut dijabarkan berturut-turut pada sub-bab berikut.
 
-### 2.13.1 Stratified Group K-Fold Cross Validation
+### 2.13.1 Stratified Group K-Fold *Cross Validation*
 
 *K-Fold Cross Validation* membagi data menjadi *k* bagian (*fold*) yang bergantian menjadi data validasi sementara sisanya menjadi data latih, sehingga estimasi performa model tidak bergantung pada satu pembagian data yang kebetulan menguntungkan atau merugikan. Penelitian ini menerapkan varian *Stratified Group K-Fold*: "*stratified*" berarti proporsi tiap kelas dijaga tetap seimbang pada setiap *fold*, sedangkan "*group*" berarti seluruh citra yang berasal dari pasien atau kasus yang sama selalu berada pada *fold* yang sama, baik seluruhnya di data latih maupun seluruhnya di data validasi, tidak pernah tercampur. Aspek *group* ini krusial untuk mencegah *data leakage*: tanpa pengelompokan ini, dua irisan CT dari pasien yang sama (yang secara visual sangat mirip) bisa jatuh terpisah ke *train* dan *validation*, membuat performa validasi tampak lebih baik daripada performa sesungguhnya pada pasien yang benar-benar baru.
 
@@ -145,15 +145,15 @@ $$Akurasi = \frac{TP + TN}{TP + TN + FP + FN}$$
 
 $$Presisi = \frac{TP}{TP + FP}$$
 
-3. **Recall**, proporsi data yang sebenarnya termasuk suatu kelas yang berhasil diprediksi benar oleh model:
+3. ***Recall***, proporsi data yang sebenarnya termasuk suatu kelas yang berhasil diprediksi benar oleh model:
 
-$$Recall = \frac{TP}{TP + FN}$$
+$$*Recall* = \frac{TP}{TP + FN}$$
 
 Untuk kelas Malignant, metrik ini disebut *cancer recall* dan menjadi prioritas evaluasi utama dalam penelitian ini karena secara klinis, melewatkan kasus kanker (*false negative*) jauh lebih berbahaya daripada salah menandai kasus jinak sebagai kanker (*false positive*).
 
 4. **F1-Score**, rata-rata harmonik presisi dan *recall*:
 
-$$F1 = 2 \times \frac{Presisi \times Recall}{Presisi + Recall}$$
+$$F1 = 2 \times \frac{Presisi \times *Recall*}{Presisi + *Recall*}$$
 
 Metrik ini dipakai dalam bentuk *macro average*, yaitu rata-rata F1-Score seluruh kelas dengan bobot yang sama rata tanpa memandang jumlah data tiap kelas, agar kelas minoritas (Benign) tetap mendapat bobot evaluasi yang setara:
 
@@ -167,6 +167,14 @@ $$TPR = \frac{TP}{TP + FN} \qquad FPR = \frac{FP}{FP + TN}$$
 
 Nilai AUC berkisar antara 0,5 (model tidak lebih baik daripada tebakan acak) hingga 1,0 (pemisahan sempurna antar kelas).
 
-### 2.13.3 Ambang Keputusan (Decision Threshold)
+### 2.13.3 Ambang Keputusan (Decision *Threshold*)
 
 Secara *default*, model klasifikasi multi-kelas memilih kelas dengan probabilitas tertinggi (*argmax*) sebagai prediksi akhir. Pada konteks skrining kanker, ambang ini bisa disesuaikan: sistem dapat diatur untuk menandai suatu citra sebagai Malignant bila probabilitas kelas tersebut sudah melewati ambang tertentu (misalnya 30%), meski bukan probabilitas tertinggi di antara ketiga kelas. Menurunkan ambang ini membuat sistem lebih "waspada" (menaikkan *cancer recall*) dengan konsekuensi menaikkan jumlah alarm palsu (menurunkan presisi), sehingga pemilihan ambang perlu didasarkan pada kurva presisi-*recall* empiris, bukan ditetapkan sembarangan.
+
+### 2.13.4 *Black Box Testing*
+
+*Black Box Testing* merupakan metode pengujian perangkat lunak yang berfokus sepenuhnya pada fungsionalitas sistem tanpa memperhatikan struktur logika internal atau kode program yang membangunnya. Dalam pendekatan ini, penguji memandang aplikasi sebagai sebuah kotak tertutup, sehingga evaluasi dilakukan hanya berdasarkan kesesuaian antara masukan yang diberikan dengan keluaran yang dihasilkan sistem. Karena kasus ujinya diturunkan dari spesifikasi kebutuhan, bukan dari isi kode, pengujian ini juga dikenal sebagai pengujian berbasis spesifikasi (Nidhra & Dondeti, 2012).
+
+Penerapan *Black Box Testing* bertujuan menemukan kesalahan dalam beberapa kategori, yaitu fungsi yang tidak benar atau hilang, kesalahan antarmuka, kesalahan pada struktur data atau akses basis data, kesalahan perilaku atau kinerja, serta kesalahan inisialisasi dan terminasi program (Khan, 2011). Setiap kasus uji dirumuskan sebagai pasangan antara skenario masukan dan hasil yang diharapkan, lalu hasil aktual yang diperoleh saat aplikasi dijalankan dibandingkan dengan harapan tersebut untuk menentukan apakah fitur dinyatakan berhasil.
+
+Dalam penelitian ini, pengujian difokuskan pada elemen-elemen interaktif prototipe aplikasi, yaitu widget pengunggahan citra, lapisan validasi input, panel hasil prediksi, *slider* ambang keputusan, serta panel rincian anggota *ensemble*. Dengan demikian, metode ini memastikan aplikasi beroperasi stabil dan memberikan respons yang sesuai kepada pengguna tanpa perlu menilai kebenaran kode programnya satu per satu.

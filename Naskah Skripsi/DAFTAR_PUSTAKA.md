@@ -14,12 +14,16 @@ Hennes, W. N. (2021). *Lung cancer dataset (IQ-OTHNCCD)* [Dataset]. Kaggle. http
 
 Imtiaz, M. N. (2022). *CT scan images of lung cancer patients* [Dataset]. Kaggle. https://www.kaggle.com/datasets/mdnafeesimtiaz/ct-scan-images-of-lung-cancer
 
+Khan, M. E. (2011). Different approaches to black box testing technique for finding errors. *International Journal of Software Engineering & Applications*, *2*(4), 31–40. https://doi.org/10.5121/ijsea.2011.2404
+
 Kingma, D. P., & Ba, J. L. (2015). Adam: A method for stochastic optimization. *3rd International Conference on Learning Representations, ICLR 2015 -- Conference Track Proceedings*, 1–15. https://doi.org/10.48550/arXiv.1412.6980
 
 
 Mahimkar, A. (2022). *IQ-OTHNCCD -- Lung cancer dataset* [Dataset]. Kaggle. https://www.kaggle.com/datasets/adityamahimkar/iqothnccd-lung-cancer-dataset
 
 National Cancer Institute. (2012). *TCIA diagnosis data 2012-04-20* [Data set]. The Cancer Imaging Archive. https://wiki.cancerimagingarchive.net/display/Public/LIDC-IDRI
+
+Nidhra, S., & Dondeti, J. (2012). Black box and white box testing techniques – A literature review. *International Journal of Embedded Systems and Applications*, *2*(2), 29–50. https://doi.org/10.5121/ijesa.2012.2204
 
 Noman, M. Z. I., Sati, K., Yousuf, M. A., Aloteibi, S., & Moni, M. A. (2025). LungCT-NET: An explainable transfer learning-based robust ensemble model for lung cancer diagnosis. *Knowledge-Based Systems*. https://www.sciencedirect.com/science/article/pii/S0950705125009001
 

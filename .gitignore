@@ -25,3 +25,6 @@ Kodingan/outputs/reports/*.log
 
 # Pratinjau PDF hasil ekspor (dibuat ulang dari .docx)
 Naskah Skripsi/Skripsi_Preview.pdf
+
+# Cadangan sementara saat Skripsi_Lengkap.docx sedang dibuka Word
+Naskah Skripsi/*_BARU.docx
