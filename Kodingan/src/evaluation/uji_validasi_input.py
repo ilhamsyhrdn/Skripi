@@ -37,7 +37,11 @@ def main():
     # ambil merata dari ketiga kelas supaya gerbang diuji pada seluruh ragam citra CT
     ct = pd.concat([test[test.canonical_label == k].sample(N_CT // 3, random_state=SEED)
                     for k in ["Malignant", "Benign", "Normal"]], ignore_index=True)
-    coco_files = sorted(COCO.glob("*.jpg"))
+    # citra COCO yang pernah masuk manifes gerbang dikecualikan, supaya pengujian
+    # ini benar-benar memakai citra yang belum pernah dilihat model penyaring
+    dipakai = {Path(x).name for x in pd.read_csv(ROOT / "outputs/manifests/ood_manifest.csv").path}
+    coco_files = [f for f in sorted(COCO.glob("*.jpg")) if f.name not in dipakai]
+    assert len(coco_files) >= N_COCO, "citra COCO tak terpakai tidak cukup"
     coco = [coco_files[i] for i in rng.choice(len(coco_files), N_COCO, replace=False)]
 
     rows = []
@@ -71,10 +75,10 @@ def main():
         ax.add_patch(plt.Rectangle((0, 0), 1, 1, transform=ax.transAxes, fill=False,
                                    edgecolor="#2a7f3e" if ok else "#b3202c", linewidth=1.6))
     fig.tight_layout(pad=0.6)
-    fig.savefig(OUT_FIG / "gambar_4_11_uji_validasi_input.png", dpi=200,
+    fig.savefig(OUT_FIG / "gambar_4_12_uji_validasi_input.png", dpi=200,
                 bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print("\nTersimpan: gambar_4_11_uji_validasi_input.png")
+    print("\nTersimpan: gambar_4_12_uji_validasi_input.png")
 
 
 if __name__ == "__main__":

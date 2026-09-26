@@ -24,6 +24,7 @@ MANIFESTS = Path("D:/skripsi/Kodingan/outputs/manifests")
 KAGGLE = MANIFESTS / "kaggle_canonical_pool.csv"
 PSEUDO = MANIFESTS / "kaggle_pseudolabeled.csv"
 LIDC_FULL = MANIFESTS / "lidc_canonical_pool_full.csv"
+MODALITY = MANIFESTS / "lidc_series_modality.csv"
 
 OUT_POOL = MANIFESTS / "combined_full_pool.csv"
 OUT_TEST = MANIFESTS / "test_holdout_full.csv"
@@ -38,6 +39,20 @@ def main():
     kaggle = pd.read_csv(KAGGLE)
     pseudo = pd.read_csv(PSEUDO)
     lidc = pd.read_csv(LIDC_FULL)
+
+    # LIDC-IDRI menyimpan foto rontgen dada (Modality DX/CR) berdampingan dengan
+    # CT dalam struktur folder yang sama. Nilai pikselnya bukan Hounsfield Unit,
+    # sehingga windowing HU menjenuhkannya jadi putih polos. Seri semacam itu
+    # dibuang di sini agar pool benar-benar hanya berisi Computed Tomography.
+    mod = pd.read_csv(MODALITY, dtype={"uid": str})
+    peta = dict(zip(mod["uid"], mod["modality"]))
+    lidc["series_uid_file"] = [Path(x).stem for x in lidc["path"]]
+    lidc["modality"] = lidc["series_uid_file"].map(peta)
+    sebelum = len(lidc)
+    lidc = lidc[lidc["modality"] == "CT"].drop(columns=["series_uid_file", "modality"]).reset_index(drop=True)
+    print(f"Saring modality: {sebelum} -> {len(lidc)} seri "
+          f"({sebelum - len(lidc)} seri bukan CT dibuang)", flush=True)
+    assert len(lidc) > 0, "tidak ada seri CT tersisa; jalankan scan_lidc_modality.py dulu"
 
     kaggle_rows = pd.DataFrame({
         "path": kaggle["path"],

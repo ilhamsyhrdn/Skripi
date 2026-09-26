@@ -38,7 +38,7 @@ FIGURES = {
     "Gambar/Gambar_3.3_Sampel_Kaggle_Rathi.png": ("gambar_3_3_sampel_kaggle_rathi.png", 9.5),
     "Gambar/Gambar_3.4_Sampel_LIDC.png": ("gambar_3_4_sampel_lidc.png", 9.5),
     "Gambar/Gambar_3.5_Use_Case_Diagram.png": ("gambar_3_5_use_case.png", 14.5),
-    "Gambar/Gambar_4.1_Kurva_ResNet_Fold4.png": ("gambar_4_1_kurva_resnet_fold4.png", 15.0),
+    "Gambar/Gambar_4.1_Kurva_Pelatihan.png": ("gambar_4_1_kurva_pelatihan.png", 15.0),
     "Gambar/Gambar_4.2_Kontribusi_Finetuning.png": ("gambar_4_2_kontribusi_finetuning.png", 14.5),
     "Gambar/Gambar_4.3_Kontribusi_Augmentasi.png": ("gambar_4_3_kontribusi_augmentasi.png", 13.0),
     "Gambar/Gambar_4.4_Kontribusi_Ensemble.png": ("gambar_4_4_kontribusi_ensemble.png", 15.0),

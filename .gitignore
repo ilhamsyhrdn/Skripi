@@ -15,6 +15,7 @@ Kodingan/outputs/reports/*.pkl
 # Cache & log yang bisa dibuat ulang / tidak perlu di-diff
 Kodingan/outputs/manifests/_fingerprint_cache.csv
 Kodingan/outputs/logs/*.log
+Kodingan/outputs/reports/*.log
 
 # Streamlit local state
 .streamlit/

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import sys
+import os
 from pathlib import Path
 
 import matplotlib
@@ -29,8 +30,12 @@ OUTPUTS = Path("D:/skripsi/Kodingan/outputs")
 VARIANTS = {
     "combined": (OUTPUTS / "models_combined", MANIFESTS / "test_holdout_combined.csv", "combined", 224),
     "full": (OUTPUTS / "models_full", MANIFESTS / "test_holdout_full.csv", "full", 512),
+    # konfigurasi augmentasi berbagi manifes uji yang sama; hanya direktori model
+    # dan awalan riwayat pelatihannya yang berbeda
+    "full_noaug": (OUTPUTS / "models_full_noaug", MANIFESTS / "test_holdout_full.csv", "full_noaug", 512),
+    "full_augct": (OUTPUTS / "models_full_augct", MANIFESTS / "test_holdout_full.csv", "full_augct", 512),
 }
-ACTIVE = "full"
+ACTIVE = os.environ.get("FIG_VARIANT", "full")
 MODELS, TEST_CSV, HIST_PREFIX, IMG_SIZE = VARIANTS[ACTIVE]
 
 plt.rcParams["font.family"] = "DejaVu Sans"
@@ -79,6 +84,28 @@ def training_curves(history_file, out_name):
     print(f"{out_name} done", flush=True)
 
 
+def model_val_terbaik():
+    """Model dengan macro-F1 validasi tertinggi di antara kesepuluh model.
+
+    Dipilih otomatis, bukan ditulis tetap, supaya keterangan di naskah yang
+    menyebut "model dengan macro-F1 validasi tertinggi" tetap benar ketika
+    konfigurasi final berganti.
+    """
+    terbaik, nilai = None, -1.0
+    for arch in ("efficientnet_b0", "resnet50"):
+        for k in range(5):
+            f = REPORTS / f"history_{HIST_PREFIX}_{arch}_fold{k}.json"
+            if not f.exists():
+                continue
+            m = max(e["macro_f1"] for e in json.load(open(f)))
+            if m > nilai:
+                terbaik, nilai = f.name, m
+    assert terbaik, "tidak ada riwayat pelatihan yang ditemukan"
+    return terbaik, nilai
+
+
 if __name__ == "__main__":
-    training_curves(f"history_{HIST_PREFIX}_resnet50_fold4.json", "gambar_4_1_kurva_resnet_fold4.png")
+    berkas, nilai = model_val_terbaik()
+    print(f"contoh kurva: {berkas} (macro-F1 validasi {nilai:.4f})", flush=True)
+    training_curves(berkas, "gambar_4_1_kurva_pelatihan.png")
     print("\nExtra figures written to", OUT, flush=True)

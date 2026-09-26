@@ -1,21 +1,28 @@
-"""Compare the models trained with and without data augmentation.
+"""Bandingkan ketiga konfigurasi data augmentation.
 
-Both groups share everything except the augmentation transforms, so the gap
-between them is what augmentation actually bought. Two things are measured:
-what it does on the held-out test set (the headline claim in Bab IV) and how
-far training accuracy runs ahead of validation accuracy, which is the
-overfitting that augmentation is supposed to hold back.
+Ketiga kelompok model berbagi seluruh pipeline yang sama kecuali pada bagian
+transformasi augmentasinya, sehingga selisih di antara ketiganya adalah
+kontribusi augmentasi itu sendiri. Tiga hal diukur:
 
-Run after train_cv.py --no-augment finishes, and after evaluate_models.py and
-stacking_ensemble.py have been run for both groups.
+1. Performa pada held-out test set lewat alur ensemble stacking yang sama.
+2. Jurang overfitting, yaitu seberapa jauh akurasi data latih meninggalkan
+   akurasi validasi pada epoch terbaik tiap model.
+3. Kebermaknaan statistik selisih antar konfigurasi lewat uji McNemar, karena
+   ketiganya diuji pada citra uji yang sama persis sehingga prediksinya
+   berpasangan.
+
+Dijalankan setelah train_cv.py selesai untuk ketiga konfigurasi, dan setelah
+evaluate_models.py serta stacking_ensemble.py dijalankan untuk masing-masing.
 """
 from __future__ import annotations
 
 import json
+from itertools import combinations
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from scipy.stats import binomtest
 from sklearn.metrics import accuracy_score, f1_score, recall_score, roc_auc_score
 
 REPORTS = Path("D:/skripsi/Kodingan/outputs/reports")
@@ -23,13 +30,32 @@ MANIFESTS = Path("D:/skripsi/Kodingan/outputs/manifests")
 CLASS_NAMES = ["Benign", "Malignant", "Normal"]
 MAL = CLASS_NAMES.index("Malignant")
 VARIANT = "full"
+THRESHOLD = 0.50
+
+# kunci pendek -> (nama tampil, akhiran berkas hasil). Kunci pendek dipakai
+# sebagai indeks CSV karena make_all_figures memanggilnya lewat nama itu.
+KONFIGURASI = {
+    "tanpa": ("Tanpa augmentasi", f"{VARIANT}_noaug"),
+    "ringan_ct": ("Augmentasi ringan CT", f"{VARIANT}_augct"),
+    "penuh": ("Augmentasi penuh", VARIANT),
+}
 
 
-def stacking_metrics(suffix: str) -> dict:
-    probs = np.load(REPORTS / f"stacking_probs_{suffix}.npy")
+def _y_true() -> np.ndarray:
     test = pd.read_csv(MANIFESTS / f"test_holdout_{VARIANT}.csv")
-    y = test["canonical_label"].map({c: i for i, c in enumerate(CLASS_NAMES)}).values
-    pred = probs.argmax(1)
+    return test["canonical_label"].map({c: i for i, c in enumerate(CLASS_NAMES)}).values
+
+
+def prediksi(suffix: str) -> tuple[np.ndarray, np.ndarray]:
+    """Probabilitas stacking dan prediksinya, memakai aturan ambang yang sama
+    persis dengan stacking_ensemble.py."""
+    probs = np.load(REPORTS / f"stacking_probs_{suffix}.npy")
+    pred = np.where(probs[:, MAL] >= THRESHOLD, MAL, probs.argmax(1))
+    return probs, pred
+
+
+def metrik(suffix: str, y: np.ndarray) -> dict:
+    probs, pred = prediksi(suffix)
     return {
         "accuracy": accuracy_score(y, pred),
         "macro_f1": f1_score(y, pred, average="macro", zero_division=0),
@@ -38,42 +64,69 @@ def stacking_metrics(suffix: str) -> dict:
     }
 
 
-def overfitting_gap(prefix: str) -> dict:
-    """Mean train-minus-validation accuracy at each model's best epoch."""
-    gaps, train_accs, val_accs = [], [], []
-    for f in sorted(REPORTS.glob(f"history_{prefix}*.json")):
+def jurang_overfitting(suffix: str) -> dict:
+    """Rata-rata selisih akurasi latih dikurangi validasi pada epoch terbaik.
+
+    Pola nama disebut per arsitektur, bukan lewat awalan saja, karena
+    `history_full_*` juga cocok dengan `history_full_noaug_*` dan
+    `history_full_augct_*` sehingga ketiga konfigurasi akan tercampur.
+    """
+    berkas = sorted(f for arch in ("efficientnet_b0", "resnet50")
+                    for f in REPORTS.glob(f"history_{suffix}_{arch}_fold*.json"))
+    assert len(berkas) == 10, f"{suffix}: ditemukan {len(berkas)} riwayat, seharusnya 10"
+    latih, validasi = [], []
+    for f in berkas:
         h = pd.DataFrame(json.load(open(f)))
         best = h.loc[h["macro_f1"].idxmax()]
-        train_accs.append(best["train_acc"])
-        val_accs.append(best["acc"])
-        gaps.append(best["train_acc"] - best["acc"])
-    return {"n_model": len(gaps), "train_acc": float(np.mean(train_accs)),
-            "val_acc": float(np.mean(val_accs)), "gap": float(np.mean(gaps))}
+        latih.append(best["train_acc"])
+        validasi.append(best["acc"])
+    latih, validasi = np.array(latih), np.array(validasi)
+    return {"n_model": len(berkas), "train_acc": float(latih.mean()),
+            "val_acc": float(validasi.mean()), "gap": float((latih - validasi).mean())}
+
+
+def mcnemar(pred_a: np.ndarray, pred_b: np.ndarray, y: np.ndarray) -> dict:
+    """Uji McNemar eksak: hanya citra yang salah satu benar dan lainnya salah
+    yang membawa informasi; sisanya tidak membedakan kedua model."""
+    a_benar, b_benar = pred_a == y, pred_b == y
+    n01 = int((~a_benar & b_benar).sum())   # hanya B benar
+    n10 = int((a_benar & ~b_benar).sum())   # hanya A benar
+    p = binomtest(n10, n10 + n01, 0.5).pvalue if (n10 + n01) else 1.0
+    return {"hanya_A_benar": n10, "hanya_B_benar": n01, "n_berbeda": n10 + n01, "p_value": p}
 
 
 def main():
-    rows = []
-    for label, suffix, prefix in [("tanpa", f"{VARIANT}_noaug", f"{VARIANT}_noaug_"),
-                                   ("dengan", VARIANT, f"{VARIANT}_")]:
-        m = stacking_metrics(suffix)
-        rows.append({"konfigurasi": label, **m})
-        g = overfitting_gap(prefix)
-        print(f"[augmentasi {label:6s}] akurasi={m['accuracy']:.4f} macroF1={m['macro_f1']:.4f} "
-              f"cancerRecall={m['cancer_recall']:.4f} ROC-AUC={m['roc_auc']:.4f}", flush=True)
-        print(f"{'':19s}rata-rata {g['n_model']} model pada epoch terbaik: "
-              f"akurasi latih={g['train_acc']:.4f} validasi={g['val_acc']:.4f} "
-              f"selisih={g['gap']:+.4f}", flush=True)
+    y = _y_true()
 
-    df = pd.DataFrame(rows)
-    out = REPORTS / f"ablasi_augmentasi_{VARIANT}.csv"
-    df.to_csv(out, index=False)
+    baris = []
+    for kunci, (nama, suffix) in KONFIGURASI.items():
+        m = metrik(suffix, y)
+        g = jurang_overfitting(suffix)
+        baris.append({"konfigurasi": kunci, "nama": nama, **m,
+                      "train_acc": g["train_acc"], "val_acc": g["val_acc"],
+                      "jurang_overfitting": g["gap"]})
 
-    d = df.set_index("konfigurasi")
-    print("\nselisih (dengan - tanpa augmentasi):")
-    for col in ["accuracy", "macro_f1", "cancer_recall", "roc_auc"]:
-        delta = d.loc["dengan", col] - d.loc["tanpa", col]
-        print(f"  {col:14s}: {delta:+.4f}")
-    print(f"\nTersimpan: {out.name}")
+    df = pd.DataFrame(baris)
+    print("=== Performa data uji (ensemble stacking, ambang 0,50) dan jurang overfitting ===")
+    tampil = df.copy()
+    for c in ["accuracy", "cancer_recall", "train_acc", "val_acc", "jurang_overfitting"]:
+        tampil[c] = (tampil[c] * 100).round(2)
+    tampil["macro_f1"] = tampil["macro_f1"].round(4)
+    tampil["roc_auc"] = tampil["roc_auc"].round(4)
+    print(tampil.to_string(index=False), flush=True)
+
+    print("\n=== Uji McNemar antar konfigurasi (442 citra uji yang sama) ===")
+    uji = []
+    for a, b in combinations(KONFIGURASI, 2):
+        r = mcnemar(prediksi(KONFIGURASI[a][1])[1], prediksi(KONFIGURASI[b][1])[1], y)
+        uji.append({"konfigurasi_A": KONFIGURASI[a][0], "konfigurasi_B": KONFIGURASI[b][0], **r,
+                    "kesimpulan": "berbeda bermakna" if r["p_value"] < 0.05 else "tidak berbeda bermakna"})
+        print(f"{KONFIGURASI[a][0]} vs {KONFIGURASI[b][0]}: hanya A benar={r['hanya_A_benar']}, hanya B benar={r['hanya_B_benar']}, "
+              f"p={r['p_value']:.4f} -> {uji[-1]['kesimpulan']}", flush=True)
+
+    df.to_csv(REPORTS / f"ablasi_augmentasi_{VARIANT}.csv", index=False)
+    pd.DataFrame(uji).to_csv(REPORTS / f"ablasi_augmentasi_mcnemar_{VARIANT}.csv", index=False)
+    print(f"\nTersimpan: ablasi_augmentasi_{VARIANT}.csv dan ablasi_augmentasi_mcnemar_{VARIANT}.csv")
 
 
 if __name__ == "__main__":

@@ -1,21 +1,21 @@
 berkas,kategori,prob_ct,keputusan,sesuai
-1.3.6.1.4.1.14519.5.2.1.6279.6001.231939547329414331267567352432.png,Citra CT paru-paru (Malignant),0.9310445189476013,Diterima,True
-Malignant case (82).jpg,Citra CT paru-paru (Malignant),0.9772230982780457,Diterima,True
-Malignant case (385).jpg,Citra CT paru-paru (Malignant),0.961280107498169,Diterima,True
-Malignant case (40).jpg,Citra CT paru-paru (Malignant),0.9415290951728821,Diterima,True
-1.3.6.1.4.1.14519.5.2.1.6279.6001.618434772073433276874225174904.png,Citra CT paru-paru (Benign),0.9622499346733093,Diterima,True
-Bengin case (102).jpg,Citra CT paru-paru (Benign),0.9820911288261414,Diterima,True
-Bengin case (35).jpg,Citra CT paru-paru (Benign),0.9783632755279541,Diterima,True
-Bengin case (61).jpg,Citra CT paru-paru (Benign),0.9543622136116028,Diterima,True
-1.3.6.1.4.1.14519.5.2.1.6279.6001.187709112896708878656939174714.png,Citra CT paru-paru (Normal),0.850781261920929,Diterima,True
-Normal case (303).jpg,Citra CT paru-paru (Normal),0.9505254030227661,Diterima,True
-Normal case (114).jpg,Citra CT paru-paru (Normal),0.8503274917602539,Diterima,True
-1.3.6.1.4.1.14519.5.2.1.6279.6001.210618824080932755350370549788.png,Citra CT paru-paru (Normal),0.8669951558113098,Diterima,True
-000000048924.jpg,Bukan citra CT paru-paru (objek umum),0.008198411203920841,Ditolak,True
-000000404191.jpg,Bukan citra CT paru-paru (objek umum),0.015451585873961449,Ditolak,True
-000000496409.jpg,Bukan citra CT paru-paru (objek umum),0.06597751379013062,Ditolak,True
-000000377368.jpg,Bukan citra CT paru-paru (objek umum),0.003191449446603656,Ditolak,True
-000000248980.jpg,Bukan citra CT paru-paru (objek umum),0.04396427050232887,Ditolak,True
-000000252716.jpg,Bukan citra CT paru-paru (objek umum),0.012306077405810356,Ditolak,True
-000000050679.jpg,Bukan citra CT paru-paru (objek umum),0.02203364297747612,Ditolak,True
-000000449579.jpg,Bukan citra CT paru-paru (objek umum),0.035323526710271835,Ditolak,True
+1.3.6.1.4.1.14519.5.2.1.6279.6001.177685820605315926524514718990.png,Citra CT paru-paru (Malignant),0.9821656346321106,Diterima,True
+1.3.6.1.4.1.14519.5.2.1.6279.6001.699408489230474820984000839814.png,Citra CT paru-paru (Malignant),0.9954860806465149,Diterima,True
+adenocarcinoma (269).png,Citra CT paru-paru (Malignant),0.9012224078178406,Diterima,True
+Malignant case (97).jpg,Citra CT paru-paru (Malignant),0.9674630761146545,Diterima,True
+1.3.6.1.4.1.14519.5.2.1.6279.6001.178680586845223339579041794709.png,Citra CT paru-paru (Benign),0.9851117730140686,Diterima,True
+1.3.6.1.4.1.14519.5.2.1.6279.6001.281254424459536762125243157973.png,Citra CT paru-paru (Benign),0.9833588004112244,Diterima,True
+Bengin case (33).jpg,Citra CT paru-paru (Benign),0.9802646636962891,Diterima,True
+1.3.6.1.4.1.14519.5.2.1.6279.6001.674809958213117379592437424616.png,Citra CT paru-paru (Benign),0.9969249367713928,Diterima,True
+Normal case (381).jpg,Citra CT paru-paru (Normal),0.9518557786941528,Diterima,True
+8.png,Citra CT paru-paru (Normal),0.9583081603050232,Diterima,True
+Normal case (380).jpg,Citra CT paru-paru (Normal),0.9510514140129089,Diterima,True
+Normal case (27).jpg,Citra CT paru-paru (Normal),0.9625058174133301,Diterima,True
+000000050896.jpg,Bukan citra CT paru-paru (objek umum),0.2097485363483429,Ditolak,True
+000000405972.jpg,Bukan citra CT paru-paru (objek umum),0.0100960498675704,Ditolak,True
+000000498463.jpg,Bukan citra CT paru-paru (objek umum),0.16170886158943176,Ditolak,True
+000000380203.jpg,Bukan citra CT paru-paru (objek umum),0.04218786954879761,Ditolak,True
+000000252776.jpg,Bukan citra CT paru-paru (objek umum),0.0347050279378891,Ditolak,True
+000000256775.jpg,Bukan citra CT paru-paru (objek umum),0.011930211447179317,Ditolak,True
+000000052017.jpg,Bukan citra CT paru-paru (objek umum),0.07246192544698715,Ditolak,True
+000000451090.jpg,Bukan citra CT paru-paru (objek umum),0.21695220470428467,Ditolak,True

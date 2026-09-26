@@ -1,0 +1,10 @@
+no,fitur,skenario,diharapkan,aktual,kesimpulan
+1,Widget Pengunggahan (Format Valid),Mengunggah citra .png dari held-out test set,Citra dimuat tanpa pesan kesalahan,"Citra ad19.png dimuat, tidak ada pesan kesalahan",Berhasil
+2,Widget Pengunggahan (Format Invalid),Memeriksa penyaringan jenis berkas pada widget,Sistem menolak berkas bukan citra,"Widget hanya menerima application/streamlit,.jpg,.jpeg,.png,.bmp, berkas .txt tidak dapat dipilih",Berhasil
+3,Area Pratinjau Citra,Memeriksa tampilan citra setelah diunggah,Citra tampil di layar utama,Pratinjau tampil (ditemukan 1 elemen citra),Berhasil
+4,Validasi Input (Citra CT),Mengunggah citra CT paru-paru,Diterima dan diteruskan ke klasifikasi,Diterima dengan keyakinan 98.3%,Berhasil
+5,Validasi Input (Bukan CT),Mengunggah citra objek umum dari dataset COCO,Ditolak sebelum klasifikasi dijalankan,"Ditolak dengan keyakinan CT paru 24.1%, panel klasifikasi tidak muncul",Berhasil
+6,Panel Hasil Prediksi,Menjalankan klasifikasi pada citra valid,Label kelas dan probabilitas tampil,Label Malignant tampil beserta grafik probabilitas ketiga kelas,Berhasil
+7,Slider Ambang Keputusan,"Menggeser ambang dari 0,50 ke 0,30",Prediksi dihitung ulang secara konsisten,"Ambang berubah ke 0,30 dan prediksi dihitung ulang, label tetap Malignant",Berhasil
+8,Panel Rincian Anggota Ensemble,Membuka rincian probabilitas tiap model dasar,Probabilitas kesepuluh model tampil,Probabilitas 10 model dasar tampil,Berhasil
+9,Panel Rincian Meta-Learner,Membuka rincian keluaran meta-learner per pasangan fold,Probabilitas kelima pasangan fold tampil,Keluaran 5 pasangan fold tampil,Berhasil

@@ -26,6 +26,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from data.dataset import CLASS_NAMES
 
 VARIANT = os.environ.get("FIG_VARIANT", "full")
+# Ketiga konfigurasi augmentasi berbagi manifes dan pembagian data yang sama;
+# yang berakhiran hanya berkas hasil. Tanpa pemisahan ini, FIG_VARIANT=full_augct
+# akan mencari test_holdout_full_augct.csv yang memang tidak pernah dibuat.
+MANIFEST_VARIANT = VARIANT.split("_")[0]
 OUT = Path("D:/skripsi/Kodingan/outputs/figures/final")
 OUT.mkdir(parents=True, exist_ok=True)
 MANIFESTS = Path("D:/skripsi/Kodingan/outputs/manifests")
@@ -103,7 +107,7 @@ def flowchart():
     _oval(ax, cx, 22.2, 2.0, 0.85, "Mulai")
     _para(ax, cx, 20.5, W, H, "Akuisisi dataset\n(7 dataset Kaggle, LIDC-IDRI)")
     _rect(ax, cx, 18.7, W, H, "Audit & deduplikasi dataset Kaggle\n(MD5 + perceptual hash)")
-    _rect(ax, cx, 16.9, W, H + 0.15, "Pemrosesan LIDC-IDRI\n(parsing XML, windowing HU,\nirisan utuh 512x512)")
+    _rect(ax, cx, 16.9, W, H + 0.45, "Pemrosesan LIDC-IDRI\n(penyaringan modality CT,\nparsing XML, windowing HU,\nirisan utuh 512x512)", fs=7)
     _rect(ax, cx, 15.0, W, H + 0.15, "Koreksi label\n(nearest-neighbor +\ndiagnosis histopatologi TCIA)")
     _rect(ax, cx, 13.1, W, H + 0.15, "Penggabungan dataset &\npembagian data\n(Stratified Group 5-Fold)")
     _rect(ax, cx, 11.2, W, H + 0.15, "Pelatihan transfer learning\n(EfficientNet-B0 & ResNet50,\naugmentasi + fine-tuning)")
@@ -295,7 +299,7 @@ def block_diagram(labels, skip_label, out_name):
 # ------------------------------------------------------------- bab iv results
 def _final_pred():
     probs = np.load(REPORTS / f"stacking_probs_{VARIANT}.npy")
-    test_df = pd.read_csv(MANIFESTS / f"test_holdout_{VARIANT}.csv")
+    test_df = pd.read_csv(MANIFESTS / f"test_holdout_{MANIFEST_VARIANT}.csv")
     l2i = {c: i for i, c in enumerate(CLASS_NAMES)}
     y_true = test_df["canonical_label"].map(l2i).values
     mal = CLASS_NAMES.index("Malignant")
@@ -450,7 +454,7 @@ def augmentation_fig():
     (jurang turun rapi 10,0 -> 5,3 -> 0,7 poin) tanpa menaikkan akurasi uji,
     jadi kedua besaran ditampilkan berdampingan.
     """
-    src = REPORTS / f"ablasi_augmentasi_{VARIANT}.csv"
+    src = REPORTS / f"ablasi_augmentasi_{MANIFEST_VARIANT}.csv"
     if not src.exists():
         print("kontribusi augmentasi DILEWATI (ablasi belum selesai)", flush=True)
         return
@@ -520,7 +524,7 @@ def ensemble_fig():
 def per_source_fig():
     """Akurasi dipecah per sumber data, supaya angka gabungan tidak dibaca berlebihan."""
     y_true, y_pred, _ = _final_pred()
-    test_df = pd.read_csv(MANIFESTS / f"test_holdout_{VARIANT}.csv")
+    test_df = pd.read_csv(MANIFESTS / f"test_holdout_{MANIFEST_VARIANT}.csv")
     is_lidc = test_df["source_dataset"].astype(str).str.upper().str.contains("LIDC").values
     mal = CLASS_NAMES.index("Malignant")
 

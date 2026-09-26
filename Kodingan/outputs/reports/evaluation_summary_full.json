@@ -1,17 +1,17 @@
 {
-  "final_ensemble_config": "Ensemble 10-model (bobot tertimbang)",
+  "final_ensemble_config": "ResNet50 (5-fold)",
   "final_metrics": {
-    "accuracy": 0.7750511247443763,
-    "macro_f1": 0.7174593998901978,
-    "cancer_recall": 0.7620578778135049,
-    "benign_recall": 0.6617647058823529,
-    "roc_auc": 0.9095203905974474
+    "accuracy": 0.744343891402715,
+    "macro_f1": 0.6863986129853701,
+    "cancer_recall": 0.75,
+    "benign_recall": 0.65625,
+    "roc_auc": 0.9101148838663509
   },
   "per_class_auc": {
-    "Benign": 0.8425667178985607,
-    "Malignant": 0.9386809494562665,
-    "Normal": 0.9473135044375149
+    "Benign": 0.8462714947089947,
+    "Malignant": 0.9243661971830985,
+    "Normal": 0.9597069597069596
   },
-  "n_test": 489,
-  "n_misclassified": 110
+  "n_test": 442,
+  "n_misclassified": 113
 }

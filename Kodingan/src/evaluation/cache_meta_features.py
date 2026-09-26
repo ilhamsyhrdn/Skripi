@@ -3,7 +3,7 @@
 Every meta-learner experiment needs the same two arrays: the out-of-fold
 probabilities the base models produce on their own validation splits, and the
 per-fold probabilities they produce on the test set. Recomputing those means a
-full GPU pass over 3101 images at 512px, which is minutes per experiment for
+full GPU pass over 2811 images at 512px, which is minutes per experiment for
 data that never changes. Caching them turns meta-learner tuning into CPU work.
 
 The out-of-fold rule is the whole point: fold k's validation rows are scored

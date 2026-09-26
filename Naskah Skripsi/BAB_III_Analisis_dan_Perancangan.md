@@ -71,7 +71,13 @@ Setelah audit, pool data Kaggle final berjumlah **1.627 citra**, dengan distribu
 
 LIDC-IDRI diunduh dari TCIA berupa berkas DICOM per pasien beserta anotasi XML radiolog. Pemrosesan dataset ini melalui beberapa tahap:
 
-*Parsing Anotasi (`parse_lidc_labels.py`).* Tiap berkas XML dibaca untuk mengekstraksi penanda nodul dari tiap radiolog, termasuk koordinat kontur nodul dan skor keganasan (1–5). Penanda-penanda dikelompokkan sebagai satu nodul konsensus bila jaraknya berada dalam toleransi 5,0 mm pada arah antar-irisan (Z) dan 40 piksel pada bidang irisan (XY) -- ambang yang dipilih agar penanda dari radiolog berbeda pada nodul fisik yang sama tetap dianggap satu nodul, tanpa menyatukan dua nodul yang sungguh terpisah. Label seri pemindaian ditentukan dari nodul konsensus dengan skor keganasan rata-rata tertinggi (nodul "terburuk" pada seri tersebut menentukan label seluruh seri). Dari 1.308 seri pemindaian yang diproses, 436 seri berlabel Malignant, 221 berlabel Benign, 226 berlabel ambigu (skor rata-rata tepat 3), dan sisanya (tidak memiliki nodul yang tercatat radiolog) berlabel Normal.
+*Penyaringan Jenis Pemindaian (`scan_lidc_modality.py`).* LIDC-IDRI tidak hanya berisi citra CT. Koleksi ini juga menyertakan foto rontgen dada (*radiografi*) dari sebagian pasien yang sama, disimpan dalam format DICOM yang sama dan struktur folder yang sama persis, sehingga tidak dapat dibedakan dari nama berkas maupun letak foldernya. Pembedanya hanya satu, yaitu tag `Modality` di dalam kepala berkas DICOM, yang bernilai `CT` untuk citra *Computed Tomography* serta `DX` atau `CR` untuk foto rontgen.
+
+Perbedaan ini bersifat menentukan karena nilai piksel kedua jenis citra berada pada skala yang sama sekali berbeda. Citra CT menyimpan nilai dalam satuan *Hounsfield Unit* yang terkalibrasi terhadap kerapatan jaringan, sedangkan foto rontgen menyimpan nilai intensitas detektor yang tidak terkalibrasi. Akibatnya, *windowing* HU yang dipakai pada tahap ekstraksi berikutnya menjenuhkan seluruh piksel foto rontgen menjadi putih polos tanpa struktur anatomi apa pun yang tersisa.
+
+Oleh sebab itu, kepala berkas DICOM dari seluruh 1.308 seri pemindaian dibaca lebih dahulu untuk mencatat nilai `Modality` masing-masing. Hasilnya, 1.018 seri berjenis CT, 237 seri berjenis DX, dan 53 seri berjenis CR. Dengan demikian 290 seri atau 22,2% dari koleksi ternyata bukan citra CT, dan seluruhnya dikeluarkan dari pool agar data penelitian benar-benar hanya berisi citra *Computed Tomography* sebagaimana dinyatakan pada judul. Pemeriksaan lanjutan memastikan penyaringan ini tidak menghilangkan satu pasien pun, karena setiap pasien yang memiliki seri rontgen juga memiliki sekurang-kurangnya satu seri CT.
+
+*Parsing Anotasi (`parse_lidc_labels.py`).* Tiap berkas XML dibaca untuk mengekstraksi penanda nodul dari tiap radiolog, termasuk koordinat kontur nodul dan skor keganasan (1–5). Penanda-penanda dikelompokkan sebagai satu nodul konsensus bila jaraknya berada dalam toleransi 5,0 mm pada arah antar-irisan (Z) dan 40 piksel pada bidang irisan (XY) -- ambang yang dipilih agar penanda dari radiolog berbeda pada nodul fisik yang sama tetap dianggap satu nodul, tanpa menyatukan dua nodul yang sungguh terpisah. Label seri pemindaian ditentukan dari nodul konsensus dengan skor keganasan rata-rata tertinggi (nodul "terburuk" pada seri tersebut menentukan label seluruh seri). Dari 1.018 seri CT yang diproses, 883 seri memiliki nodul yang tercatat radiolog, terdiri dari 436 seri berlabel Malignant, 221 berlabel Benign, dan 226 berlabel ambigu (skor rata-rata tepat 3). Sisanya sebanyak 135 seri tidak memiliki nodul yang tercatat radiolog sehingga berlabel Normal.
 
 *Ekstraksi Citra (`extract_lidc_images_full.py`).* Irisan CT yang memuat nodul konsensus dikonversi dari DICOM ke PNG lewat *windowing* HU (*level* −600, *width* 1500) pada ukuran aslinya, yaitu irisan dada utuh 512×512 piksel tanpa pemotongan. Nilai *windowing* tersebut merupakan pengaturan baku untuk pembacaan parenkim paru, sehingga jaringan paru dan nodul di dalamnya tampil dengan kontras yang memadai sementara tulang dan jaringan lunak di luar paru ditekan.
 
@@ -83,13 +89,15 @@ Alasan kedua bersifat teknis: citra pada dataset Kaggle memang tersimpan sebagai
 
 Konsekuensi dari keputusan ini diterima secara terbuka. Pada irisan utuh, nodul berukuran beberapa milimeter hanya menempati bagian kecil dari keseluruhan citra, sehingga performa pada subset LIDC-IDRI menurun dibandingkan bila citranya dipotong. Penurunan tersebut dilaporkan apa adanya pada Bab IV, Bagian 4.8, dengan pertimbangan bahwa angka yang lebih rendah tetapi diperoleh pada kondisi yang sama dengan pemakaian nyata lebih berguna daripada angka yang lebih tinggi tetapi diperoleh pada kondisi yang tidak akan pernah terjadi.
 
-Implementasi awal skrip ini sempat memiliki bug di mana seri berlabel ambigu ikut terhitung sebagai Normal karena logika pemfilteran seri yang belum lengkap; bug ini diperbaiki dengan mengecualikan seri ambigu secara eksplisit dari kelompok Normal sebelum ekstraksi, dan seluruh 1.308 citra diekstraksi ulang setelah perbaikan.
+Implementasi awal skrip ini sempat memiliki bug di mana seri berlabel ambigu ikut terhitung sebagai Normal karena logika pemfilteran seri yang belum lengkap; bug ini diperbaiki dengan mengecualikan seri ambigu secara eksplisit dari kelompok Normal sebelum ekstraksi, dan seluruh citra diekstraksi ulang setelah perbaikan.
 
 *Koreksi Label Ambigu (`relabel_ambiguous.py`).* 226 seri berlabel ambigu dilabeli ulang lewat pencarian *5-nearest-neighbor* pada ruang fitur EfficientNet-B0 *pre-trained* (ImageNet, tanpa pelatihan tambahan) terhadap seri-seri yang labelnya sudah pasti (Malignant/Benign), diambil suara mayoritas dari lima tetangga terdekat berdasarkan jarak *cosine* pada ruang fitur tersebut. Proses ini melabeli ulang 162 seri menjadi Malignant dan 64 seri menjadi Benign, sehingga tidak ada data yang harus dibuang.
 
-*Koreksi Berdasarkan Diagnosis Histopatologi (`apply_pathology_ground_truth.py`).* Sebagai lapisan validasi tambahan, label dicocokkan dengan data diagnosis histopatologi resmi TCIA, yang hanya mencakup 157 dari 1.010 pasien LIDC-IDRI (*tcia-diagnosis-data-2012-04-20.xls*, sheet "*Diagnosis Truth*"), yang mencatat kode diagnosis pada level pasien (0 = tidak diketahui, 1 = jinak, 2 = ganas primer, 3 = ganas metastasis). Kode 1 dipetakan ke Benign, kode 2 dan 3 dipetakan ke Malignant, dan kode 0 dilewati (tidak dijadikan dasar koreksi). Bila diagnosis resmi ini berbeda dari label hasil pemrosesan nodul di atas, label dikoreksi mengikuti diagnosis resmi tersebut sebagai sumber kebenaran yang lebih kuat. Dari 157 pasien yang tercakup berkas tersebut, 130 pasien memiliki seri yang beririsan dengan pool penelitian ini, mencakup 227 seri pemindaian. Proses ini mengubah label pada 142 seri dan mengonfirmasi 85 seri lain yang labelnya sudah sesuai.
+*Koreksi Berdasarkan Diagnosis Histopatologi (`apply_pathology_ground_truth.py`).* Sebagai lapisan validasi tambahan, label dicocokkan dengan data diagnosis histopatologi resmi TCIA, yang hanya mencakup 157 dari 1.010 pasien LIDC-IDRI (*tcia-diagnosis-data-2012-04-20.xls*, sheet "*Diagnosis Truth*"), yang mencatat kode diagnosis pada level pasien (0 = tidak diketahui, 1 = jinak, 2 = ganas primer, 3 = ganas metastasis). Kode 1 dipetakan ke Benign, kode 2 dan 3 dipetakan ke Malignant, dan kode 0 dilewati (tidak dijadikan dasar koreksi). Bila diagnosis resmi ini berbeda dari label hasil pemrosesan nodul di atas, label dikoreksi mengikuti diagnosis resmi tersebut sebagai sumber kebenaran yang lebih kuat. Dari 157 pasien yang tercakup berkas tersebut, 130 pasien memiliki seri CT yang beririsan dengan pool penelitian ini, mencakup 131 seri pemindaian. Proses ini mengubah label pada 46 seri dan mengonfirmasi 85 seri lain yang labelnya sudah sesuai.
 
-Pool data LIDC-IDRI final berjumlah **1.308 citra**, dengan distribusi Malignant 674, Benign 317, dan Normal 317 citra. Gambar 3.4 menunjukkan contoh citra irisan utuh untuk tiap kelas.
+Sifat koreksi ini yang bekerja pada tingkat pasien, bukan tingkat citra, sekaligus memperjelas mengapa penyaringan jenis pemindaian di tahap awal bersifat wajib. Sebelum penyaringan diterapkan, koreksi yang sama menyentuh 227 seri dan mengubah label 142 di antaranya. Selisih 96 seri seluruhnya merupakan foto rontgen yang sebelumnya berlabel Normal lalu berubah menjadi Malignant atau Benign semata-mata karena pasiennya memiliki diagnosis kanker, padahal citra rontgen itu sendiri tidak memuat bukti visual apa pun yang mendukung label tersebut. Dengan kata lain, foto rontgen bukan hanya mencemari kelas Normal, melainkan juga menyuntikkan citra tanpa struktur ke dalam kedua kelas kanker.
+
+Pool data LIDC-IDRI final berjumlah **1.018 citra** dari 1.010 pasien, dengan distribusi Malignant 609, Benign 286, dan Normal 123 citra. Gambar 3.4 menunjukkan contoh citra irisan utuh untuk tiap kelas.
 
 ![Gambar 3.4 Contoh Citra Irisan Utuh per Kelas -- LIDC-IDRI](Gambar/Gambar_3.4_Sampel_LIDC.png)
 
@@ -118,7 +126,7 @@ Selain ketiga pool citra CT di atas, penelitian ini memakai sebagian citra dari 
 
 **5. Penggabungan Dataset**
 
-Ketiga pool digabung menjadi satu manifes pelatihan, didahului pengecekan ulang duplikasi lintas sumber (MD5 dan *phash*) untuk memastikan tidak ada citra yang sama persis kebetulan muncul di lebih dari satu sumber. Hasil pengecekan ini nihil (0 duplikat), sebagaimana diharapkan mengingat kedua sumber berasal dari alur akuisisi yang sama sekali berbeda (Kaggle: citra irisan CT yang sudah disusun ulang pengunggahnya; LIDC-IDRI: hasil ekstraksi langsung dari DICOM oleh penelitian ini sendiri). Dataset gabungan berjumlah **3.101 citra** sebagaimana dirangkum pada Tabel 3.2.
+Ketiga pool digabung menjadi satu manifes pelatihan, didahului pengecekan ulang duplikasi lintas sumber (MD5 dan *phash*) untuk memastikan tidak ada citra yang sama persis kebetulan muncul di lebih dari satu sumber. Hasil pengecekan ini nihil (0 duplikat), sebagaimana diharapkan mengingat kedua sumber berasal dari alur akuisisi yang sama sekali berbeda (Kaggle: citra irisan CT yang sudah disusun ulang pengunggahnya; LIDC-IDRI: hasil ekstraksi langsung dari DICOM oleh penelitian ini sendiri). Dataset gabungan berjumlah **2.811 citra** sebagaimana dirangkum pada Tabel 3.2.
 
 Tabel 3.2 Distribusi Kelas Dataset Gabungan
 
@@ -126,8 +134,8 @@ Tabel 3.2 Distribusi Kelas Dataset Gabungan
 |---|---:|---:|---:|---:|
 | Kaggle (7 dataset, setelah audit) | 1.192 | 93 | 342 | 1.627 |
 | Kaggle (label perkiraan, hanya data latih) | 154 | 0 | 12 | 166 |
-| LIDC-IDRI (setelah koreksi label) | 674 | 317 | 317 | 1.308 |
-| **Total Gabungan** | **2.020** | **410** | **671** | **3.101** |
+| LIDC-IDRI (setelah penyaringan CT dan koreksi label) | 609 | 286 | 123 | 1.018 |
+| **Total Gabungan** | **1.955** | **379** | **477** | **2.811** |
 
 Penggabungan ini diimplementasikan dalam `combine_kaggle_lidc.py`, yang juga menjalankan ulang pengecekan MD5 dan *phash* lintas kedua sumber sebelum menyatukan manifesnya menjadi satu berkas CSV. Identitas grup untuk keperluan *Stratified Group K-Fold* diberi awalan sumbernya masing-masing (`KAGGLE::` diikuti kunci kasus asal, `LIDC::` diikuti ID pasien), sehingga kedua sumber tidak akan pernah tercampur dalam satu grup buatan yang salah, dan citra dari pasien atau kasus yang sama tetap terjamin berada pada *fold* yang sama.
 
@@ -157,7 +165,7 @@ Judul penelitian ini menyebut tiga teknik optimasi, yaitu *fine-tuning*, *data a
 
 1. **Pengukuran kontribusi *fine-tuning*.** Macro-F1 validasi terbaik yang dicapai pada fase A (*backbone* beku, hanya lapisan klasifikasi yang dilatih) dibandingkan dengan macro-F1 validasi terbaik pada fase B (tiga blok terakhir *backbone* ikut dilatih). Karena kedua fase dijalankan berurutan pada model dan pembagian data yang sama, selisihnya dapat diatribusikan langsung pada *fine-tuning*.
 
-2. **Pengukuran kontribusi *data augmentation*.** Kesepuluh model dilatih ulang dari awal sebanyak dua kali dengan pipeline pra-pemrosesan yang identik kecuali pada bagian augmentasinya, sehingga tersedia tiga kelompok model berjumlah tiga puluh model. Kelompok pertama dilatih tanpa augmentasi sama sekali, kelompok kedua memakai augmentasi ringan yang disesuaikan sifat citra CT (hanya pembalikan horizontal dan rotasi 7°, tanpa perubahan kecerahan maupun kontras, tanpa translasi, dan tanpa penskalaan), dan kelompok ketiga memakai augmentasi penuh sebagaimana konfigurasi pada Tabel 3.3. Ketiganya dievaluasi pada *held-out test set* yang sama lewat alur *ensemble* yang sama pula, lalu selisihnya diuji kebermaknaannya memakai uji McNemar.
+2. **Pengukuran kontribusi *data augmentation*.** Kesepuluh model dilatih ulang dari awal sebanyak dua kali dengan pipeline pra-pemrosesan yang identik kecuali pada bagian augmentasinya, sehingga tersedia tiga kelompok model berjumlah tiga puluh model. Kelompok pertama dilatih tanpa augmentasi sama sekali, kelompok kedua memakai augmentasi ringan yang disesuaikan sifat citra CT (hanya pembalikan horizontal dan rotasi 7°, tanpa perubahan kecerahan maupun kontras, tanpa translasi, dan tanpa penskalaan), dan kelompok ketiga memakai augmentasi penuh berupa pembalikan horizontal, transformasi afin (rotasi 15°, translasi 10%, penskalaan 0,90–1,10), serta perubahan kecerahan dan kontras sebesar 0,2. Konfigurasi yang akhirnya dipilih sebagai konfigurasi final adalah kelompok kedua, dengan dasar pemilihan dijelaskan pada Bab IV, Bagian 4.4.3, dan parameternya dicantumkan pada Tabel 3.3. Ketiganya dievaluasi pada *held-out test set* yang sama lewat alur *ensemble* yang sama pula, lalu selisihnya diuji kebermaknaannya memakai uji McNemar.
 
 3. **Pengukuran kontribusi *ensemble model*.** Performa model tunggal dibandingkan secara berjenjang dengan *ensemble soft-voting* (bobot setara dan bobot tertimbang) serta *ensemble stacking* berbasis *meta-learner*, seluruhnya pada *held-out test set* yang sama dan tanpa pelatihan ulang model dasar.
 
@@ -194,7 +202,7 @@ Tabel 3.3 Konfigurasi Hyperparameter Pelatihan
 | Early Stopping | *Patience* 6 *epoch* (macro-F1 validasi) |
 | Epoch Maksimum | 12 (Fase A) + 25 (Fase B) |
 | Regularisasi | Dropout p = 0,3 sebelum lapisan klasifikasi |
-| Augmentasi | RandomHorizontalFlip, RandomAffine (rotasi 15°, translasi 10%, skala 0,90–1,10), ColorJitter 0,2 (data latih saja) |
+| Augmentasi (konfigurasi final) | RandomHorizontalFlip dan RandomRotation 7°, tanpa ColorJitter, tanpa translasi, tanpa penskalaan (data latih saja) |
 | Ukuran Citra Input | 512×512 piksel |
 | Jumlah Fold | 5 (Stratified Group K-Fold) |
 | Porsi Held-Out Test Set | 18% grup |
@@ -212,7 +220,8 @@ Komponen utama pada laman Prediksi Citra CT meliputi:
 2. **Area Pratinjau Citra**, menampilkan citra yang diunggah agar pengguna dapat memastikan masukannya sudah benar sebelum diproses.
 3. **Lapisan Validasi Input**, yang menjalankan model klasifikasi biner (CT paru-paru versus bukan) dan menghentikan proses bila citra berada di luar domain, disertai pesan penolakan beserta tingkat keyakinannya.
 4. **Panel Hasil Prediksi**, menampilkan label kelas (Malignant/Benign/Normal), probabilitas tiap kelas dari *ensemble stacking*, dan pengaturan ambang keputusan yang dapat digeser pengguna.
-5. **Panel Rincian Anggota Ensemble**, menampilkan probabilitas keluaran tiap model anggota sebelum digabungkan meta-learner, sehingga kontribusi masing-masing model terlihat.
+5. **Panel Rincian Anggota Ensemble**, menampilkan probabilitas keluaran tiap model anggota sebelum digabungkan *meta-learner*, sehingga kontribusi masing-masing model terlihat.
+6. **Panel Rincian Meta-Learner**, menampilkan keluaran *meta-learner* pada tiap pasangan *fold* sebelum kelimanya dirata-ratakan, sehingga tahap penggabungan tingkat kedua ikut dapat ditelusuri.
 
 ### 3.5.2 Use Case Diagram Aplikasi
 
@@ -238,4 +247,4 @@ Tabel 3.4 Skenario Black Box Testing
 | 6 | Panel Hasil Prediksi | Menjalankan klasifikasi pada citra valid | Citra CT yang tervalidasi | Label kelas dan probabilitas tampil |
 | 7 | Slider Ambang Keputusan | Menggeser ambang dari 0,50 ke 0,30 | Ambang keputusan baru | Prediksi ter-*update* konsisten |
 | 8 | Panel Rincian Anggota Ensemble | Membuka rincian probabilitas tiap model | Selesainya proses inferensi | Probabilitas kesepuluh model tampil |
-| 9 | Pemilihan Konfigurasi Ensemble | Mengganti konfigurasi ke EfficientNet-B0 saja | Pilihan konfigurasi ensemble | Prediksi dihitung ulang dari anggota terpilih |
+| 9 | Panel Rincian Meta-Learner | Membuka rincian keluaran *meta-learner* per pasangan *fold* | Selesainya proses inferensi | Probabilitas kelima pasangan *fold* tampil |
