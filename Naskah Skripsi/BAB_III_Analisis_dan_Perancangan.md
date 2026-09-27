@@ -37,7 +37,7 @@ Penelitian ini menggunakan data dari dua sumber utama yang karakteristiknya jauh
 
 **1. Dataset Kaggle (Tujuh Sumber)**
 
-Ketujuh dataset ini pada dasarnya adalah kompilasi ulang dari beberapa koleksi citra CT paru-paru yang sama (terutama dataset IQ-OTHNCCD asal Irak), diunggah ulang oleh pengguna Kaggle yang berbeda-beda dengan struktur folder dan penamaan kelas yang bervariasi. Tabel 3.1 merangkum ketujuh sumber tersebut beserta jumlah citra mentahnya sebelum audit.
+Ketujuh dataset ini pada dasarnya adalah kompilasi ulang dari beberapa koleksi citra CT paru-paru yang sama (terutama dataset IQ-OTHNCCD yang dikumpulkan dari rumah sakit di Irak oleh Al-Yasriy et al. (2020)), diunggah ulang oleh pengguna Kaggle yang berbeda-beda dengan struktur folder dan penamaan kelas yang bervariasi. Tabel 3.1 merangkum ketujuh sumber tersebut beserta jumlah citra mentahnya sebelum audit.
 
 Tabel 3.1 Sumber Dataset Kaggle
 
@@ -122,7 +122,7 @@ Dengan pembatasan ini, seluruh angka evaluasi pada Bab IV dihitung hanya terhada
 
 **4. Dataset COCO (Validasi Input)**
 
-Selain ketiga pool citra CT di atas, penelitian ini memakai sebagian citra dari COCO val2017 (*Common Objects in Context*), yaitu dataset citra objek sehari-hari yang sama sekali tidak berkaitan dengan citra medis. Citra tersebut dipakai sebagai kelas pembanding untuk melatih model klasifikasi biner yang membedakan "Citra CT Paru-paru" dari "Bukan Citra CT Paru-paru". Model biner tersebut berfungsi sebagai lapisan validasi input pada prototipe aplikasi, yang menolak unggahan di luar domain sebelum diteruskan ke model klasifikasi utama. Citra COCO tidak pernah dipakai melatih maupun menguji model klasifikasi tiga kelas, sehingga tidak memengaruhi angka performa yang dilaporkan pada Bab IV.
+Selain ketiga pool citra CT di atas, penelitian ini memakai sebagian citra dari COCO val2017 (*Common Objects in Context*; Lin et al., 2014), yaitu dataset citra objek sehari-hari yang sama sekali tidak berkaitan dengan citra medis. Citra tersebut dipakai sebagai kelas pembanding untuk melatih model klasifikasi biner yang membedakan "Citra CT Paru-paru" dari "Bukan Citra CT Paru-paru". Model biner tersebut berfungsi sebagai lapisan validasi input pada prototipe aplikasi, yang menolak unggahan di luar domain sebelum diteruskan ke model klasifikasi utama. Citra COCO tidak pernah dipakai melatih maupun menguji model klasifikasi tiga kelas, sehingga tidak memengaruhi angka performa yang dilaporkan pada Bab IV. Lapisan semacam ini diperlukan karena model klasifikasi tetap mengeluarkan probabilitas untuk masukan apa pun, termasuk masukan yang sama sekali di luar distribusi data latihnya. Hendrycks & Gimpel (2017) menunjukkan bahwa deteksi masukan di luar distribusi merupakan persoalan tersendiri dan mengusulkan probabilitas *softmax* sebagai tolok ukur dasarnya.
 
 **5. Penggabungan Dataset**
 

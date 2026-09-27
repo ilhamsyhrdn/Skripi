@@ -22,7 +22,7 @@ Data CT disimpan dalam format DICOM (*Digital Imaging and Communications in Medi
 2. **Lapisan Pooling**, yang mereduksi resolusi spasial *feature map* (misalnya lewat *max pooling*) sehingga jaringan menjadi lebih tahan terhadap pergeseran kecil posisi objek dan mengurangi jumlah komputasi pada lapisan berikutnya.
 3. **Lapisan Fully Connected**, yang menerima fitur hasil ekstraksi dan memetakannya menjadi skor tiap kelas lewat fungsi aktivasi seperti *Softmax*.
 
-Keunggulan utama CNN dibandingkan pendekatan *machine learning* klasik adalah kemampuannya melakukan ekstraksi fitur secara otomatis dari data mentah, tanpa memerlukan perekayasaan fitur manual (*handcrafted feature engineering*) yang lazim diperlukan pada metode citra medis konvensional seperti analisis tekstur atau bentuk secara eksplisit. Gambar 2.1 menunjukkan alur umum arsitektur ini, dari citra input hingga skor tiap kelas.
+Keunggulan utama CNN dibandingkan pendekatan *machine learning* klasik adalah kemampuannya melakukan ekstraksi fitur secara otomatis dari data mentah, tanpa memerlukan perekayasaan fitur manual (*handcrafted feature engineering*) yang lazim diperlukan pada metode citra medis konvensional seperti analisis tekstur atau bentuk secara eksplisit. Gambar 2.1 menunjukkan alur umum arsitektur ini, dari citra input hingga skor tiap kelas. Kemampuan inilah yang menjadikan CNN pendekatan dominan dalam analisis citra medis, mulai dari klasifikasi dan deteksi hingga segmentasi (Litjens et al., 2017; Shen et al., 2017).
 
 ![Gambar 2.1 Arsitektur Umum CNN](Gambar/Gambar_2.1_Arsitektur_CNN.png)
 
@@ -30,7 +30,7 @@ Gambar 2.1 Arsitektur Umum Convolutional Neural Network (CNN)
 
 ## 2.4 *Transfer Learning*
 
-Melatih CNN dari nol (*from scratch*) membutuhkan data berlabel dalam jumlah sangat besar agar model tidak sekadar menghafal data latih. Pada domain citra medis, ketersediaan data berlabel jauh lebih terbatas dibandingkan domain citra umum, baik karena biaya anotasi oleh ahli maupun karena batasan privasi pasien. *Transfer learning* mengatasi keterbatasan ini dengan memanfaatkan bobot jaringan yang telah dilatih pada dataset besar seperti ImageNet (lebih dari satu juta citra, seribu kelas objek umum), lalu mengadaptasi bobot tersebut untuk tugas baru yang datanya lebih terbatas.
+Melatih CNN dari nol (*from scratch*) membutuhkan data berlabel dalam jumlah sangat besar agar model tidak sekadar menghafal data latih. Pada domain citra medis, ketersediaan data berlabel jauh lebih terbatas dibandingkan domain citra umum, baik karena biaya anotasi oleh ahli maupun karena batasan privasi pasien. *Transfer learning* mengatasi keterbatasan ini dengan memanfaatkan bobot jaringan yang telah dilatih pada dataset besar seperti ImageNet (lebih dari satu juta citra, seribu kelas objek umum), lalu mengadaptasi bobot tersebut untuk tugas baru yang datanya lebih terbatas. Tinjauan literatur Kim et al. (2022) atas penerapan *transfer learning* pada klasifikasi citra medis merangkum dua cara utama memanfaatkan model *pre-trained* ImageNet, yaitu sebagai pengekstraksi fitur dengan bobot dibekukan dan lewat *fine-tuning* sebagian atau seluruh lapisannya. Kedua cara tersebut dijalankan berurutan pada penelitian ini sebagai fase A dan fase B.
 
 Penelitian ini menerapkan skema *transfer learning* dua fase:
 
@@ -69,13 +69,15 @@ Proses pelatihan CNN pada dasarnya adalah pencarian nilai bobot yang meminimalka
 
 **Adam** (*Adaptive Moment Estimation*), diperkenalkan oleh Kingma & Ba (2015), adalah *optimizer* yang menghitung estimasi adaptif momen pertama (rata-rata bergerak dari gradien) dan momen kedua (rata-rata bergerak dari kuadrat gradien) untuk menyesuaikan laju pembelajaran tiap parameter secara individual. Penelitian ini memakai Adam pada fase *feature extraction* dengan *learning rate* awal 1e-3, dan *learning rate* yang jauh lebih kecil (1e-5) pada fase *fine-tuning* agar penyesuaian bobot *backbone* yang sudah cukup baik dilakukan secara halus, bukan diguncang oleh langkah pembaruan yang terlalu besar.
 
+Varian Adam yang banyak dipakai belakangan ini adalah AdamW, yang memisahkan peluruhan bobot (*weight decay*) dari pembaruan berbasis gradien sehingga regularisasinya bekerja sebagaimana mestinya (Loshchilov & Hutter, 2019). Penelitian ini memakai Adam tanpa peluruhan bobot; regularisasi dilakukan melalui *dropout* 0,3 pada lapisan klasifikasi, *early stopping*, dan augmentasi data.
+
 **ReduceLROnPlateau** adalah metode penjadwalan laju pembelajaran yang memantau metrik validasi (dalam penelitian ini, macro-F1 pada data validasi) dan menurunkan *learning rate* dengan faktor tertentu (0,5) bila metrik tersebut berhenti membaik selama sejumlah *epoch* berturut-turut (*patience*). Mekanisme ini membantu model keluar dari kondisi stagnasi tanpa perlu menebak jadwal penurunan *learning rate* secara manual sejak awal.
 
 ***Early Stopping*** menghentikan pelatihan secara otomatis bila metrik validasi tidak membaik selama sejumlah *epoch* berturut-turut, dan menyimpan bobot dari *epoch* dengan performa validasi terbaik sepanjang pelatihan (bukan bobot dari *epoch* terakhir), sehingga model akhir yang dipakai bukan model yang sudah mulai *overfitting*.
 
 ## 2.8 *Data Augmentation*
 
-Augmentasi data adalah teknik memperbanyak variasi citra latih secara sintetis lewat transformasi acak yang tidak mengubah label kelasnya, bertujuan menekan risiko *overfitting* pada data latih yang jumlahnya terbatas. Penelitian ini menerapkan augmentasi berupa pembalikan horizontal acak (*random horizontal flip*), transformasi afin acak (rotasi, translasi, dan skala), serta perubahan warna acak (*color jitter*). Seluruh augmentasi ini hanya diterapkan pada data latih, tidak pada data validasi maupun data uji, agar evaluasi tetap mengukur performa pada citra asli yang representatif terhadap kondisi nyata.
+Augmentasi data adalah teknik memperbanyak variasi citra latih secara sintetis lewat transformasi acak yang tidak mengubah label kelasnya, bertujuan menekan risiko *overfitting* pada data latih yang jumlahnya terbatas. Shorten & Khoshgoftaar (2019) mengelompokkan teknik augmentasi citra antara lain ke dalam transformasi geometris, seperti pembalikan, rotasi, translasi, dan penskalaan, serta transformasi ruang warna, seperti perubahan kecerahan dan kontras. Pada citra medis, pemilihan transformasi perlu mempertimbangkan sifat modalitasnya agar citra hasil augmentasi tetap wajar secara klinis (Chlap et al., 2021). Penelitian ini menguji tiga kekuatan augmentasi, yaitu tanpa augmentasi, augmentasi ringan berupa pembalikan horizontal acak (*random horizontal flip*) dan rotasi hingga 7°, serta augmentasi penuh yang menambahkan translasi, penskalaan, dan perubahan kecerahan serta kontras (*color jitter*), lalu menetapkan augmentasi ringan sebagai konfigurasi final. Seluruh augmentasi hanya diterapkan pada data latih, tidak pada data validasi maupun data uji, agar evaluasi tetap mengukur performa pada citra asli yang representatif terhadap kondisi nyata.
 
 ## 2.9 *Ensemble Model*
 
@@ -99,7 +101,7 @@ Penelitian ini memakai beberapa perangkat lunak utama untuk memproses data, mela
 
 ### 2.11.1 Python dan PyTorch
 
-Python dipilih sebagai bahasa pemrograman utama karena ekosistem pustaka ilmiahnya yang matang. PyTorch (Paszke et al., 2019) dipakai sebagai *framework Deep Learning* karena dukungan *dynamic computation graph*-nya yang memudahkan proses eksperimen dan *debugging*, serta ketersediaan model *pre-trained* (termasuk EfficientNet-B0 dan ResNet50) lewat modul `torchvision`.
+Python dipilih sebagai bahasa pemrograman utama karena ekosistem pustaka ilmiahnya yang matang. PyTorch (Paszke et al., 2019) dipakai sebagai *framework Deep Learning* karena dukungan *dynamic computation graph*-nya yang memudahkan proses eksperimen dan *debugging*, serta ketersediaan model *pre-trained* (termasuk EfficientNet-B0 dan ResNet50) lewat modul `torchvision`. Operasi numerik seperti penyusunan vektor probabilitas masukan *meta-learner* dan perhitungan metrik ditangani dengan NumPy (Harris et al., 2020).
 
 ### 2.11.2 pydicom dan SimpleITK
 
@@ -111,19 +113,31 @@ Streamlit adalah *framework* Python untuk membangun aplikasi *web* interaktif la
 
 ## 2.12 Penelitian Terkait
 
-Tabel 2.1 merangkum beberapa penelitian terdahulu mengenai klasifikasi kanker paru-paru pada citra CT yang menjadi rujukan metodologis dan pembanding dalam penelitian ini.
+Tabel 2.1 merangkum penelitian terdahulu mengenai klasifikasi kanker paru-paru dan nodul paru pada citra CT yang menjadi rujukan metodologis dan pembanding dalam penelitian ini, diurutkan menurut tahun terbitnya.
 
 Tabel 2.1 Penelitian Terkait
 
 | Peneliti (Tahun) | Objektif | Metode | Akurasi | Dataset |
 |---|---|---|---|---|
-| Armato et al. (2011) | Membangun basis data anotasi nodul paru untuk riset CAD | Anotasi manual oleh hingga 4 radiolog independen per kasus, disertai skor keganasan 1–5 | Tidak berlaku (bukan studi klasifikasi) | LIDC-IDRI (1.010 pasien) |
+| Al-Yasriy et al. (2020) | Diagnosis citra CT paru ke dalam kelas normal, jinak, dan ganas | CNN dengan arsitektur AlexNet | 93,548% (sensitivitas 95,714%, spesifisitas 95%) | IQ-OTH/NCCD, dikumpulkan dari rumah sakit di Irak |
+| Huang et al. (2022) | Klasifikasi nodul paru jinak dan ganas pada CT toraks | *Self-supervised transfer learning* berbasis adaptasi domain pada 3D CNN (SSTL-DA) | 91,07% (AUC 95,84%) | LIDC-IDRI |
+| Shi et al. (2022) | Diagnosis nodul paru jinak dan ganas pada CT dada | *Semi-supervised deep transfer learning* (SDTL) yang turut memanfaatkan nodul tanpa label | 88,3% (AUC 91,0%); 74,5% pada data uji independen | 3.038 nodul berlabel patologi dan 14.735 nodul tanpa label |
+| Wang et al. (2022) | Membedakan nodul paru solid ganas dari jinak | *Transfer learning* Inception V3 pada CT non-kontras irisan tipis dengan validasi silang lima lipatan | 98,9% (AUC 0,999) pada data validasi | 210 lesi dari 3 institusi, terkonfirmasi histopatologi |
 | Zhang et al. (2022) | Mengatasi label ambigu pada LIDC-IDRI untuk prediksi kanker paru yang lebih andal | Pelabelan ulang nodul berskor ambigu lewat *k-nearest-neighbor* pada ruang fitur CNN | Tidak dilaporkan sebagai angka tunggal | LIDC-IDRI |
+| Raza et al. (2023) | Klasifikasi kanker paru ke dalam kelas jinak, ganas, dan normal | Lung-EffNet, yaitu *transfer learning* EfficientNet-B0 sampai B4 dengan lapisan atas tambahan | 99,10% | IQ-OTH/NCCD |
+| Saha et al. (2024) | Deteksi kanker paru empat kelas pada citra CT dada | VER-Net, yaitu penumpukan tiga model *transfer learning* | 91% | Citra CT dada empat kelas (adenokarsinoma, sel besar, sel skuamosa, normal) |
+| Sandag & Kabo (2024) | Membandingkan EfficientNet dan ResNet untuk klasifikasi kanker paru | *Transfer learning* ResNet50, ResNet101, serta EfficientNetB1, B3, B5, dan B7 | 97,78% (EfficientNetB3) | 1.000 citra CT paru empat kelas |
+| Alqhatani et al. (2025) | Klasifikasi tahap kanker paru yang dapat dijelaskan | EfficientNet-B0 disertai Grad-CAM | 99% | IQ-OTH/NCCD (1.190 citra) |
 | Noman et al. (2025) | Klasifikasi biner nodul paru (ganas vs jinak) yang akurat dan dapat dijelaskan | *Stacking ensemble* atas kombinasi model *pre-trained* terbaik (VGG-16, VGG-19, MobileNet-V2, InceptionNet-V3, EfficientNet-B0, ResNet152-V2, DenseNet-121) disertai SHAP (LungCT-NET) | 98,99% (AUC 98,15%) | Dataset CT publik |
+| Patange et al. (2026) | Deteksi dini kanker paru ke dalam kelas jinak, ganas, dan normal | Perbandingan enam arsitektur (VGG16, CNN kustom, MobileNetV2, ResNet50, InceptionV3, EfficientNetB0) | 89,39% ± 2,10% (VGG16) | IQ-OTH/NCCD |
 
-Berbeda dari penelitian-penelitian di atas yang masing-masing berfokus pada satu aspek (anotasi, koreksi label, atau *ensemble*), penelitian ini mengintegrasikan ketiganya dalam satu jalur kerja: audit dan penggabungan dataset Kaggle dengan LIDC-IDRI, koreksi label ambigu mengikuti Zhang et al. (2022), dan *ensemble stacking* mengikuti Noman et al. (2025), lalu membandingkan kontribusi tiap tahap secara terpisah pada Bab IV.
+Arah penelitian Huang et al. (2022) kemudian dikembangkan oleh Wu et al. (2023) melalui kerangka *self-supervised transfer learning* yang dipandu perhatian visual untuk klasifikasi nodul paru jinak dan ganas pada CT dada, sehingga pemanfaatan bobot *pre-trained* pada data nodul yang terbatas menjadi benang merah berbagai penelitian tersebut.
 
-Satu catatan penting dalam membaca Tabel 2.1: akurasi 98,99% yang dilaporkan Noman et al. (2025) dicapai pada tugas klasifikasi **biner** (ganas versus jinak), sedangkan penelitian ini menangani klasifikasi **tiga kelas** (Malignant, Benign, dan Normal) pada data gabungan dua sumber dengan karakteristik berbeda. Angka kedua penelitian karena itu tidak dapat dibandingkan secara langsung, karena jumlah kelas, komposisi data, dan tingkat kesulitan tugasnya berbeda. Yang diadopsi dari penelitian tersebut adalah pendekatan metodologisnya, yaitu penggabungan beberapa model *pre-trained* lewat *meta-learner* alih-alih agregasi dengan bobot tetap, bukan target angkanya.
+Dua pola terbaca dari Tabel 2.1. Pertama, penelitian pada dataset IQ-OTH/NCCD melaporkan akurasi yang sangat tinggi, yaitu 89,39% hingga 99,10%, sedangkan penelitian pada nodul LIDC-IDRI maupun data rumah sakit berlabel patologi melaporkan angka yang lebih rendah, dan akurasi Shi et al. (2022) bahkan turun dari 88,3% menjadi 74,5% ketika diuji pada data independen. Perbedaan ini sejalan dengan temuan penelitian ini pada Bab IV, Bagian 4.8, bahwa tingkat kesulitan kedua jenis sumber data memang tidak sama. Kedua, penggabungan beberapa model telah ditempuh sebelumnya, baik lewat penumpukan model (Saha et al., 2024) maupun *stacking ensemble* dengan *meta-learner* (Noman et al., 2025).
+
+Berbeda dari penelitian-penelitian di atas yang masing-masing berfokus pada satu aspek, yaitu arsitektur, koreksi label, atau *ensemble*, penelitian ini mengintegrasikan ketiganya dalam satu jalur kerja: audit dan penggabungan dataset Kaggle dengan LIDC-IDRI, koreksi label ambigu mengikuti Zhang et al. (2022), dan *ensemble stacking* mengikuti Noman et al. (2025), lalu mengukur kontribusi *fine-tuning*, *data augmentation*, dan *ensemble model* secara terpisah pada Bab IV.
+
+Satu catatan penting dalam membaca Tabel 2.1: angka-angka tersebut diperoleh pada jumlah kelas, komposisi data, dan skema evaluasi yang berbeda-beda. Akurasi 98,99% yang dilaporkan Noman et al. (2025), misalnya, dicapai pada klasifikasi **biner** (ganas versus jinak), sedangkan penelitian ini menangani klasifikasi **tiga kelas** (Malignant, Benign, dan Normal) pada data gabungan dua sumber dengan karakteristik berbeda. Angka-angka tersebut karena itu tidak dapat dibandingkan secara langsung dengan hasil penelitian ini. Yang diadopsi dari penelitian terdahulu adalah pendekatan metodologisnya, misalnya penggabungan beberapa model *pre-trained* lewat *meta-learner* alih-alih agregasi dengan bobot tetap, bukan target angkanya.
 
 ## 2.13 Evaluasi dan Pengujian Sistem
 
@@ -131,7 +145,7 @@ Evaluasi dalam penelitian ini dilakukan pada tiga tataran yang berbeda sifatnya.
 
 ### 2.13.1 Stratified Group K-Fold *Cross Validation*
 
-*K-Fold Cross Validation* membagi data menjadi *k* bagian (*fold*) yang bergantian menjadi data validasi sementara sisanya menjadi data latih, sehingga estimasi performa model tidak bergantung pada satu pembagian data yang kebetulan menguntungkan atau merugikan. Penelitian ini menerapkan varian *Stratified Group K-Fold*: "*stratified*" berarti proporsi tiap kelas dijaga tetap seimbang pada setiap *fold*, sedangkan "*group*" berarti seluruh citra yang berasal dari pasien atau kasus yang sama selalu berada pada *fold* yang sama, baik seluruhnya di data latih maupun seluruhnya di data validasi, tidak pernah tercampur. Aspek *group* ini krusial untuk mencegah *data leakage*: tanpa pengelompokan ini, dua irisan CT dari pasien yang sama (yang secara visual sangat mirip) bisa jatuh terpisah ke *train* dan *validation*, membuat performa validasi tampak lebih baik daripada performa sesungguhnya pada pasien yang benar-benar baru.
+*K-Fold Cross Validation* membagi data menjadi *k* bagian (*fold*) yang bergantian menjadi data validasi sementara sisanya menjadi data latih, sehingga estimasi performa model tidak bergantung pada satu pembagian data yang kebetulan menguntungkan atau merugikan (Friedl et al., 2002). Penelitian ini menerapkan varian *Stratified Group K-Fold*: "*stratified*" berarti proporsi tiap kelas dijaga tetap seimbang pada setiap *fold*, sedangkan "*group*" berarti seluruh citra yang berasal dari pasien atau kasus yang sama selalu berada pada *fold* yang sama, baik seluruhnya di data latih maupun seluruhnya di data validasi, tidak pernah tercampur. Aspek *group* ini krusial untuk mencegah *data leakage*: tanpa pengelompokan ini, dua irisan CT dari pasien yang sama (yang secara visual sangat mirip) bisa jatuh terpisah ke *train* dan *validation*, membuat performa validasi tampak lebih baik daripada performa sesungguhnya pada pasien yang benar-benar baru.
 
 ### 2.13.2 Metrik Evaluasi
 
