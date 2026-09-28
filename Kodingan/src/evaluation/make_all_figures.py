@@ -96,55 +96,64 @@ def _elbow(ax, pts):
 
 
 def flowchart():
-    fig, ax = plt.subplots(figsize=(6.0, 13.0))
+    """Diagram alur penelitian: dua belas tahap yang sama persis dengan rincian
+    pada Bab III, Bagian 3.1. Ukuran gambar 6,0 x 8,8 inci dicetak selebar 14 cm,
+    sehingga huruf 8,5 pt tetap terbaca sekitar 7,8 pt pada naskah."""
+    fs = 8.5
+    fig, ax = plt.subplots(figsize=(6.0, 8.8))
     ax.axis("off")
-    ax.set_xlim(0, 10)
-    ax.set_ylim(0, 23)
+    ax.set_xlim(0, 12)
+    ax.set_ylim(-0.6, 17.6)
 
-    cx = 4.2
-    W, H = 4.6, 1.15
+    cx, W, H = 4.6, 7.2, 0.9
+    langkah = [
+        ("rect", "Studi literatur dan analisis masalah"),
+        ("para", "Akuisisi dan audit dataset Kaggle\n(MD5 dan perceptual hash)"),
+        ("para", "Akuisisi dan pemrosesan LIDC-IDRI\n(penyaringan Modality, parsing XML, windowing HU)"),
+        ("rect", "Koreksi label ambigu\n(nearest-neighbor dan histopatologi TCIA)"),
+        ("rect", "Pemulihan label citra Kaggle tanpa label\n(pelabelan perkiraan nearest-neighbor)"),
+        ("rect", "Penggabungan dataset\n(pengecekan ulang duplikasi lintas sumber)"),
+        ("rect", "Pembagian data\n(Stratified Group K-Fold 5 fold dan held-out test set)"),
+        ("rect", "Pelatihan EfficientNet-B0 dan ResNet50\n(feature extraction lalu fine-tuning)"),
+        ("rect", "Pengukuran kontribusi fine-tuning,\ndata augmentation, dan ensemble model"),
+        ("rect", "Pemilihan konfigurasi final\n(ensemble stacking, ambang 0,50)"),
+        ("rect", "Pembangunan prototipe aplikasi Streamlit\ndan lapisan validasi input"),
+    ]
+    y = 17.0
+    _oval(ax, cx, y, 2.2, 0.7, "Mulai", fs=fs)
+    atas_sebelumnya = y - 0.35
+    pusat = []
+    y -= 1.2
+    for jenis, teks in langkah:
+        (_para if jenis == "para" else _rect)(ax, cx, y, W, H, teks, fs=fs)
+        _arrow(ax, (cx, atas_sebelumnya), (cx, y + H / 2))
+        atas_sebelumnya = y - H / 2
+        pusat.append(y)
+        y -= 1.2
 
-    _oval(ax, cx, 22.2, 2.0, 0.85, "Mulai")
-    _para(ax, cx, 20.5, W, H, "Akuisisi dataset\n(7 dataset Kaggle, LIDC-IDRI)")
-    _rect(ax, cx, 18.7, W, H, "Audit & deduplikasi dataset Kaggle\n(MD5 + perceptual hash)")
-    _rect(ax, cx, 16.9, W, H + 0.45, "Pemrosesan LIDC-IDRI\n(penyaringan modality CT,\nparsing XML, windowing HU,\nirisan utuh 512x512)", fs=7)
-    _rect(ax, cx, 15.0, W, H + 0.15, "Koreksi label\n(nearest-neighbor +\ndiagnosis histopatologi TCIA)")
-    _rect(ax, cx, 13.1, W, H + 0.15, "Penggabungan dataset &\npembagian data\n(Stratified Group 5-Fold)")
-    _rect(ax, cx, 11.2, W, H + 0.15, "Pelatihan transfer learning\n(EfficientNet-B0 & ResNet50,\naugmentasi + fine-tuning)")
-    _diamond(ax, cx, 9.0, 3.6, 1.9, "Evaluasi\nmodel")
-    _rect(ax, 8.2, 11.2, 2.8, 1.5, "Penyetelan ulang\n(augmentasi, laju\npembelajaran, fine-tuning)", fs=7)
-    _rect(ax, cx, 6.9, W, H, "Ensemble model &\npenyesuaian ambang keputusan")
-    _rect(ax, cx, 5.2, W, H, "Pembuatan aplikasi\nberbasis web (Streamlit)")
-    _diamond(ax, cx, 3.2, 3.6, 1.9, "Black Box\nTesting")
-    _rect(ax, 8.2, 5.2, 2.6, 1.0, "Perbaikan kode", fs=7)
-    _rect(ax, cx, 1.4, W, H, "Penulisan laporan skripsi")
-    _oval(ax, cx, 0.35, 2.0, 0.85, "Selesai")
+    # keputusan hasil Black Box Testing
+    y -= 0.15
+    _diamond(ax, cx, y, 4.2, 1.35, "Black Box Testing\nlulus?", fs=fs)
+    _arrow(ax, (cx, atas_sebelumnya), (cx, y + 0.675))
+    y_dia = y
+    y -= 1.45
+    _rect(ax, cx, y, W, H, "Penulisan laporan skripsi", fs=fs)
+    _arrow(ax, (cx, y_dia - 0.675), (cx, y + H / 2))
+    ax.text(cx + 0.18, y_dia - 0.95, "ya", fontsize=fs, ha="left")
+    y_lap = y
+    y -= 1.1
+    _oval(ax, cx, y, 2.2, 0.7, "Selesai", fs=fs)
+    _arrow(ax, (cx, y_lap - H / 2), (cx, y + 0.35))
 
-    # main vertical flow
-    chain = [22.2 - 0.43, 20.5 + H / 2, 20.5 - H / 2, 18.7 + H / 2, 18.7 - H / 2,
-             16.9 + 0.65, 16.9 - 0.65, 15.0 + 0.65, 15.0 - 0.65, 13.1 + 0.65,
-             13.1 - 0.65, 11.2 + 0.65, 11.2 - 0.65, 9.0 + 0.95]
-    for i in range(0, len(chain) - 1, 2):
-        _arrow(ax, (cx, chain[i]), (cx, chain[i + 1]))
-    _arrow(ax, (cx, 9.0 - 0.95), (cx, 6.9 + H / 2))
-    _arrow(ax, (cx, 6.9 - H / 2), (cx, 5.2 + H / 2))
-    _arrow(ax, (cx, 5.2 - H / 2), (cx, 3.2 + 0.95))
-    _arrow(ax, (cx, 3.2 - 0.95), (cx, 1.4 + H / 2))
-    _arrow(ax, (cx, 1.4 - H / 2), (cx, 0.35 + 0.43))
+    # umpan balik: gagal uji -> perbaikan aplikasi -> kembali ke tahap aplikasi
+    y_app = pusat[-1]
+    sx = 10.45
+    _rect(ax, sx, (y_app + y_dia) / 2, 2.6, 0.9, "Perbaikan\naplikasi", fs=fs)
+    _elbow(ax, [(cx + 2.1, y_dia), (sx, y_dia), (sx, (y_app + y_dia) / 2 - 0.45)])
+    _elbow(ax, [(sx, (y_app + y_dia) / 2 + 0.45), (sx, y_app), (cx + W / 2, y_app)])
+    ax.text(cx + 2.3, y_dia + 0.12, "tidak", fontsize=fs, ha="left")
 
-    # feedback loop: evaluation -> scenario fix -> training
-    _elbow(ax, [(cx + 1.8, 9.0), (8.2, 9.0), (8.2, 11.2 - 0.75)])
-    _elbow(ax, [(8.2, 11.2 + 0.75), (8.2, 12.1), (cx + W / 2, 12.1), (cx + W / 2 - 0.4, 12.1)])
-    ax.text(cx + 2.0, 9.25, "kurang baik", fontsize=6.5, ha="left")
-    ax.text(cx + 0.15, 8.0, "baik", fontsize=6.5, ha="left")
-
-    # feedback loop: black box testing -> code fix -> web app
-    _elbow(ax, [(cx + 1.8, 3.2), (8.2, 3.2), (8.2, 5.2 - 0.5)])
-    _elbow(ax, [(8.2, 5.2 + 0.5), (8.2, 5.95), (cx + W / 2, 5.95), (cx + W / 2 - 0.4, 5.95)])
-    ax.text(cx + 2.0, 3.45, "tidak lulus", fontsize=6.5, ha="left")
-    ax.text(cx + 0.15, 2.25, "lulus", fontsize=6.5, ha="left")
-
-    fig.tight_layout(pad=0.3)
+    fig.tight_layout(pad=0.2)
     fig.savefig(OUT / "gambar_3_1_alur_penelitian.png", dpi=200, bbox_inches="tight",
                 facecolor="white")
     plt.close(fig)
@@ -153,56 +162,72 @@ def flowchart():
 
 # ------------------------------------------------------------ use case diagram
 def use_case():
-    fig, ax = plt.subplots(figsize=(7.2, 5.0))
+    """Diagram use case prototipe aplikasi, sesuai laman Prediksi Citra CT pada
+    streamlit_app/app.py: klasifikasi selalu didahului validasi input
+    (<<include>>), sedangkan pengaturan ambang dan kedua panel rincian bersifat
+    opsional (<<extend>>)."""
+    fs = 9
+    fig, ax = plt.subplots(figsize=(6.4, 4.9))
     ax.axis("off")
-    ax.set_xlim(0, 11)
-    ax.set_ylim(0, 8)
+    ax.set_xlim(0, 12.8)
+    ax.set_ylim(0, 9.8)
 
-    # system boundary
-    ax.add_patch(Rectangle((3.1, 0.3), 7.5, 7.4, linewidth=1.0, edgecolor=EDGE,
+    ax.add_patch(Rectangle((2.65, 0.25), 10.0, 9.3, linewidth=1.0, edgecolor=EDGE,
                             facecolor="none"))
-    ax.text(6.85, 7.4, "Sistem Klasifikasi Kanker Paru-Paru", ha="center",
-            fontsize=8.5)
+    ax.text(7.65, 9.05, "Prototipe Aplikasi Klasifikasi Kanker Paru-Paru", ha="center",
+            fontsize=fs + 0.5)
 
-    ax_x, ax_y = 1.4, 4.0
-    ax.add_patch(Ellipse((ax_x, ax_y + 1.15), 0.5, 0.5, fill=False, linewidth=1.0,
+    ax_x, ax_y = 1.25, 4.9
+    ax.add_patch(Ellipse((ax_x, ax_y + 1.15), 0.55, 0.55, fill=False, linewidth=1.0,
                           edgecolor=EDGE))
-    ax.plot([ax_x, ax_x], [ax_y + 0.9, ax_y - 0.15], color=EDGE, linewidth=1.0)
-    ax.plot([ax_x - 0.45, ax_x + 0.45], [ax_y + 0.55, ax_y + 0.55], color=EDGE, linewidth=1.0)
-    ax.plot([ax_x, ax_x - 0.38], [ax_y - 0.15, ax_y - 0.85], color=EDGE, linewidth=1.0)
-    ax.plot([ax_x, ax_x + 0.38], [ax_y - 0.15, ax_y - 0.85], color=EDGE, linewidth=1.0)
-    ax.text(ax_x, ax_y - 1.2, "Pengguna", ha="center", fontsize=8.5)
+    ax.plot([ax_x, ax_x], [ax_y + 0.88, ax_y - 0.2], color=EDGE, linewidth=1.0)
+    ax.plot([ax_x - 0.5, ax_x + 0.5], [ax_y + 0.5, ax_y + 0.5], color=EDGE, linewidth=1.0)
+    ax.plot([ax_x, ax_x - 0.42], [ax_y - 0.2, ax_y - 0.95], color=EDGE, linewidth=1.0)
+    ax.plot([ax_x, ax_x + 0.42], [ax_y - 0.2, ax_y - 0.95], color=EDGE, linewidth=1.0)
+    ax.text(ax_x, ax_y - 1.35, "Pengguna", ha="center", fontsize=fs)
 
+    kiri, kanan = 5.05, 10.45
     ucs = {
-        "upload": ("Mengunggah\ncitra CT", 5.1, 6.5),
-        "preview": ("Melihat pratinjau\ncitra", 5.1, 4.9),
-        "classify": ("Melakukan\nklasifikasi", 5.1, 3.3),
-        "threshold": ("Mengatur ambang\nkeputusan", 8.7, 4.1),
-        "result": ("Melihat hasil &\nconfidence score", 5.1, 1.7),
-        "members": ("Melihat probabilitas\ntiap anggota ensemble", 8.7, 2.3),
+        "upload": ("Mengunggah\ncitra CT", kiri, 7.7),
+        "preview": ("Melihat pratinjau\ncitra", kiri, 5.9),
+        "classify": ("Menjalankan\nklasifikasi", kiri, 4.1),
+        "result": ("Melihat hasil\nprediksi", kiri, 2.3),
+        "validate": ("Memvalidasi\ncitra masukan", kanan, 7.1),
+        "threshold": ("Mengatur ambang\nkeputusan", kanan, 5.1),
+        "members": ("Melihat rincian\nanggota ensemble", kanan, 3.1),
+        "meta": ("Melihat rincian\nmeta-learner", kanan, 1.2),
     }
+    lebar = {"kiri": 3.5, "kanan": 3.7}
     pos = {}
     for key, (label, x, y) in ucs.items():
-        ax.add_patch(Ellipse((x, y), 2.9, 1.15, linewidth=1.0, edgecolor=EDGE,
-                              facecolor=FILL))
-        ax.text(x, y, label, ha="center", va="center", fontsize=7.5, linespacing=1.3)
-        pos[key] = (x, y)
+        w = lebar["kiri" if x == kiri else "kanan"]
+        ax.add_patch(Ellipse((x, y), w, 1.35, linewidth=1.0, edgecolor=EDGE, facecolor=FILL))
+        ax.text(x, y, label, ha="center", va="center", fontsize=fs, linespacing=1.3)
+        pos[key] = (x, y, w)
 
-    for key in ["upload", "preview", "classify", "result"]:
-        x, y = pos[key]
-        ax.plot([ax_x + 0.45, x - 1.45], [ax_y, y], color=EDGE, linewidth=0.8)
+    for key in ("upload", "preview", "classify", "result"):
+        x, y, w = pos[key]
+        ax.plot([ax_x + 0.5, x - w / 2], [ax_y, y], color=EDGE, linewidth=0.8)
 
-    def dashed(a, b, label):
-        (x1, y1), (x2, y2) = pos[a], pos[b]
-        ax.plot([x1 + 1.35, x2 - 1.35], [y1, y2], linestyle=(0, (4, 3)),
-                color="#555555", linewidth=0.8)
-        ax.text((x1 + x2) / 2 + 0.15, (y1 + y2) / 2 + 0.16, label, fontsize=6.5,
-                style="italic", color="#555555", ha="center")
+    def dashed(dari, ke, label):
+        """Panah putus-putus dari use case dasar/perluasan ke use case tujuannya."""
+        x1, y1, w1 = pos[dari]
+        x2, y2, w2 = pos[ke]
+        if x1 < x2:
+            p1, p2 = (x1 + w1 / 2, y1), (x2 - w2 / 2, y2)
+        else:
+            p1, p2 = (x1 - w1 / 2, y1), (x2 + w2 / 2, y2)
+        ax.add_patch(FancyArrowPatch(p1, p2, arrowstyle="-|>", mutation_scale=9,
+                                      color="#444444", linewidth=0.8, linestyle=(0, (4, 3))))
+        ax.text((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2 + 0.18, label, fontsize=fs - 1,
+                style="italic", color="#333333", ha="center")
 
-    dashed("classify", "threshold", "<<extend>>")
-    dashed("result", "members", "<<extend>>")
+    dashed("classify", "validate", "<<include>>")
+    dashed("threshold", "classify", "<<extend>>")
+    dashed("members", "result", "<<extend>>")
+    dashed("meta", "result", "<<extend>>")
 
-    fig.tight_layout(pad=0.3)
+    fig.tight_layout(pad=0.2)
     fig.savefig(OUT / "gambar_3_5_use_case.png", dpi=200, bbox_inches="tight",
                 facecolor="white")
     plt.close(fig)
@@ -210,10 +235,16 @@ def use_case():
 
 
 # --------------------------------------------------------------- sample grids
-def sample_grid(df, out_name, n=3, classes=("Malignant", "Benign", "Normal")):
+def sample_grid(df, out_name, n=3, classes=("Malignant", "Benign", "Normal"), merata=True):
     fig, axes = plt.subplots(len(classes), n, figsize=(n * 1.9, len(classes) * 2.05))
     for r, cls in enumerate(classes):
-        sub = df[df["canonical_label"] == cls].head(n)
+        kelas = df[df["canonical_label"] == cls].reset_index(drop=True)
+        if merata and len(kelas) > n:
+            # n citra berjarak merata sepanjang urutan manifes, bukan n baris
+            # pertama, agar contohnya bukan irisan bertetangga dari kasus yang sama
+            sub = kelas.iloc[np.linspace(0, len(kelas) - 1, n).round().astype(int)]
+        else:
+            sub = kelas.head(n)
         for c in range(n):
             ax = axes[r, c]
             ax.set_xticks([]); ax.set_yticks([])
@@ -236,41 +267,49 @@ def samples():
                 "gambar_3_2_sampel_kaggle_alyasriy.png")
     sample_grid(kaggle[kaggle["source_dataset"] == "CT Scan Images for Lung Cancer (Dishan rathi20)"],
                 "gambar_3_3_sampel_kaggle_rathi.png")
+    # hanya seri Computed Tomography; foto rontgen (DX/CR) disaring seperti pada
+    # build_full_dataset.py. Setiap baris LIDC-IDRI sudah berasal dari seri pasien
+    # yang berbeda, sehingga cukup diambil baris-baris pertamanya.
     lidc = pd.read_csv(MANIFESTS / "lidc_canonical_pool_full.csv")
-    sample_grid(lidc, "gambar_3_4_sampel_lidc.png")
+    mod = pd.read_csv(MANIFESTS / "lidc_series_modality.csv", dtype={"uid": str})
+    ct = set(mod.loc[mod["modality"] == "CT", "uid"])
+    sample_grid(lidc[[Path(x).stem in ct for x in lidc["path"]]], "gambar_3_4_sampel_lidc.png",
+                merata=False)
 
 
 # ---------------------------------------------------------- bab ii schematics
-def _chain(ax, labels, y=0.5, w=1.75, h=1.15, gap=0.42, fs=7.5):
-    x = 0.25
-    centers = []
+def _kotak_berantai(ax, labels, fs, y=0.55, w=1.72, h=1.5, gap=0.56, x0=0.1):
+    """Kotak-kotak berurutan yang dihubungkan panah; mengembalikan tepi kiri-kanan."""
+    x = x0
+    tepi = []
     for text in labels:
         ax.add_patch(Rectangle((x, y), w, h, linewidth=1.0, edgecolor=EDGE, facecolor=FILL))
         ax.text(x + w / 2, y + h / 2, text, ha="center", va="center", fontsize=fs,
-                linespacing=1.35)
-        centers.append((x, x + w))
+                linespacing=1.3)
+        tepi.append((x, x + w))
         x += w + gap
-    for i in range(len(centers) - 1):
-        _arrow(ax, (centers[i][1], y + h / 2), (centers[i + 1][0], y + h / 2))
-    return x, centers
+    for i in range(len(tepi) - 1):
+        _arrow(ax, (tepi[i][1], y + h / 2), (tepi[i + 1][0], y + h / 2))
+    return tepi
 
 
 def cnn_diagram():
-    fig, ax = plt.subplots(figsize=(9.2, 2.1))
+    """Arsitektur umum CNN. Lebar gambar 6,6 inci dicetak selebar 14 cm,
+    sehingga huruf 9,5 pt tampil sekitar 8 pt pada naskah."""
+    fs = 9.5
+    fig, ax = plt.subplots(figsize=(6.6, 2.0))
     ax.axis("off")
-    labels = ["Citra masukan\n224 x 224", "Lapisan\nkonvolusi", "Lapisan\npooling",
-              "Lapisan konvolusi\n& pooling\n(berulang)", "Fully\nconnected",
-              "Keluaran\n3 kelas"]
-    xmax, _ = _chain(ax, labels, y=0.35, w=1.62, h=1.25, gap=0.36, fs=7)
-    ax.plot([0.25, 0.25 + 1.62 * 4 + 0.36 * 3], [0.18, 0.18], color="#666666", linewidth=0.8)
-    ax.text((0.25 + 1.62 * 4 + 0.36 * 3) / 2, 0.02, "ekstraksi fitur", fontsize=7,
-            ha="center", color="#444444")
-    ax.plot([0.25 + 1.62 * 4 + 0.36 * 4, xmax - 0.42], [0.18, 0.18], color="#666666", linewidth=0.8)
-    ax.text((0.25 + 1.62 * 4 + 0.36 * 4 + xmax - 0.42) / 2, 0.02, "klasifikasi",
-            fontsize=7, ha="center", color="#444444")
-    ax.set_xlim(0, xmax)
-    ax.set_ylim(-0.12, 1.75)
-    fig.tight_layout(pad=0.25)
+    labels = ["Citra\nmasukan\n512 x 512", "Lapisan\nkonvolusi", "Lapisan\npooling",
+              "Konvolusi\n& pooling\nberulang", "Fully\nconnected", "Keluaran\n3 kelas"]
+    tepi = _kotak_berantai(ax, labels, fs)
+    kiri_a, kanan_a = tepi[0][0], tepi[3][1]
+    kiri_b, kanan_b = tepi[4][0], tepi[5][1]
+    for a, b, teks in ((kiri_a, kanan_a, "ekstraksi fitur"), (kiri_b, kanan_b, "klasifikasi")):
+        ax.plot([a, b], [0.3, 0.3], color="#555555", linewidth=0.8)
+        ax.text((a + b) / 2, 0.0, teks, fontsize=fs, ha="center", va="center", color="#333333")
+    ax.set_xlim(0, 13.45)
+    ax.set_ylim(-0.3, 2.2)
+    fig.tight_layout(pad=0.1)
     fig.savefig(OUT / "gambar_2_1_arsitektur_cnn.png", dpi=200, bbox_inches="tight",
                 facecolor="white")
     plt.close(fig)
@@ -278,19 +317,24 @@ def cnn_diagram():
 
 
 def block_diagram(labels, skip_label, out_name):
-    fig, ax = plt.subplots(figsize=(8.6, 2.6))
+    """Satu blok MBConv atau bottleneck residual beserta skip connection-nya."""
+    fs = 9.5
+    fig, ax = plt.subplots(figsize=(6.6, 2.6))
     ax.axis("off")
-    xmax, centers = _chain(ax, labels, y=0.3, w=1.62, h=1.2, gap=0.38, fs=7)
-    x_first = (centers[0][0] + centers[0][1]) / 2
-    x_last = (centers[-1][0] + centers[-1][1]) / 2
-    ax.annotate("", xy=(x_last, 1.55), xytext=(x_first, 1.55),
-                arrowprops=dict(arrowstyle="-|>", color="#555555", linewidth=0.9,
-                                 connectionstyle="arc3,rad=-0.22"))
-    ax.text((x_first + x_last) / 2, 2.12, skip_label, ha="center", fontsize=7,
-            color="#555555")
-    ax.set_xlim(0, xmax)
-    ax.set_ylim(0, 2.45)
-    fig.tight_layout(pad=0.25)
+    n = len(labels)
+    gap = 0.56 if n == 6 else 0.9
+    w = (13.0 - (n - 1) * gap) / n
+    tepi = _kotak_berantai(ax, labels, fs, y=0.2, w=w, gap=gap)
+    x_first = (tepi[0][0] + tepi[0][1]) / 2
+    x_last = (tepi[-1][0] + tepi[-1][1]) / 2
+    ax.annotate("", xy=(x_last, 1.8), xytext=(x_first, 1.8),
+                arrowprops=dict(arrowstyle="-|>", color="#444444", linewidth=0.9,
+                                connectionstyle="arc3,rad=-0.18"))
+    ax.text((x_first + x_last) / 2, 2.72, skip_label, ha="center", fontsize=fs,
+            color="#333333")
+    ax.set_xlim(0, 13.2)
+    ax.set_ylim(0, 3.05)
+    fig.tight_layout(pad=0.1)
     fig.savefig(OUT / out_name, dpi=200, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     print(f"{out_name} done", flush=True)
@@ -553,15 +597,15 @@ def per_source_fig():
 
 if __name__ == "__main__":
     cnn_diagram()
-    block_diagram(["Masukan\nH x W x C", "Konvolusi 1x1\n(ekspansi)",
-                    "Konvolusi\ndepthwise 3x3", "Squeeze-and-\nExcitation",
-                    "Konvolusi 1x1\n(proyeksi)", "Keluaran"],
-                   "skip connection (bila dimensi sesuai)",
-                   "gambar_2_2_blok_mbconv.png")
-    block_diagram(["Masukan x", "Konvolusi 1x1\n(reduksi)", "Konvolusi 3x3",
-                    "Konvolusi 1x1\n(ekspansi)", "Keluaran\nF(x) + x"],
-                   "skip connection: F(x) + x",
-                   "gambar_2_3_blok_residual.png")
+    block_diagram(["Masukan\nH x W x C", "Konvolusi\n1x1\n(ekspansi)",
+                   "Konvolusi\ndepthwise\n3x3", "Squeeze-\nand-\nExcitation",
+                   "Konvolusi\n1x1\n(proyeksi)", "Keluaran"],
+                  "skip connection (bila dimensi sesuai)",
+                  "gambar_2_2_blok_mbconv.png")
+    block_diagram(["Masukan x", "Konvolusi\n1x1\n(reduksi)", "Konvolusi\n3x3",
+                   "Konvolusi\n1x1\n(ekspansi)", "Keluaran\nF(x) + x"],
+                  "skip connection: F(x) + x",
+                  "gambar_2_3_blok_residual.png")
     flowchart()
     samples()
     use_case()

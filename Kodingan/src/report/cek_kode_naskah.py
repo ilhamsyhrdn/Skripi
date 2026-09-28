@@ -21,7 +21,9 @@ KODE = Path("D:/skripsi/Kodingan")
 def baris_sumber() -> set[str]:
     kumpulan = set()
     for f in list(KODE.glob("src/**/*.py")) + list(KODE.glob("streamlit_app/**/*.py")):
-        if "__pycache__" in f.parts:
+        # skrip penyusun laporan dilewati karena dapat memuat salinan teks naskah
+        # itu sendiri, sehingga cuplikan yang tidak ada di kode asli ikut lolos
+        if "__pycache__" in f.parts or f.parent.name == "report":
             continue
         for b in f.read_text(encoding="utf-8", errors="ignore").splitlines():
             if b.strip():

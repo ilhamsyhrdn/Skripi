@@ -28,3 +28,7 @@ Naskah Skripsi/Skripsi_Preview.pdf
 
 # Cadangan sementara saat Skripsi_Lengkap.docx sedang dibuka Word
 Naskah Skripsi/*_BARU.docx
+
+# Skripsi teman dan template resmi prodi: hanya acuan format, bukan bagian repo
+/SKRIPSI.docx
+Naskah Skripsi/Templete Penyusunan*.docx

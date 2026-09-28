@@ -30,17 +30,19 @@ OUT_CSV = ROOT / "outputs/reports/sampel_kesalahan.csv"
 def pita(img: Image.Image, asli: str, prediksi: str) -> Image.Image:
     img = img.convert("RGB")
     img.thumbnail((440, 440))
-    tinggi_pita = 58
+    # tinggi huruf 6,8% lebar citra: pada lebar cetak 4 cm di naskah setara
+    # sekitar 7,6 pt, sehingga keterangan tetap terbaca ketika dicetak
+    ukuran = max(12, round(img.width * 0.068))
+    jarak = round(ukuran * 1.2)
+    tinggi_pita = 2 * jarak + 8
     kanvas = Image.new("RGB", (img.width, img.height + tinggi_pita), "white")
     kanvas.paste(img, (0, tinggi_pita))
     d = ImageDraw.Draw(kanvas)
-    try:
-        f = ImageFont.truetype("arialbd.ttf", 22)
-    except OSError:
-        f = ImageFont.load_default()
+    f = ImageFont.truetype("arialbd.ttf", ukuran)
     for k, teks in enumerate((f"Asli: {asli}", f"Prediksi: {prediksi}")):
         w = d.textlength(teks, font=f)
-        d.text(((img.width - w) / 2, 4 + k * 26), teks, fill="black", font=f)
+        assert w <= img.width - 8, f"keterangan terlalu lebar: {teks}"
+        d.text(((img.width - w) / 2, 4 + k * jarak), teks, fill="black", font=f)
     return kanvas
 
 

@@ -15,6 +15,8 @@ BAB = ["00_Halaman_Depan_dan_Abstrak.md", "BAB_I_Pendahuluan.md", "BAB_II_Tinjau
        "BAB_III_Analisis_dan_Perancangan.md", "BAB_IV_Hasil_dan_Pembahasan.md",
        "BAB_V_Kesimpulan_dan_Saran.md"]
 NAMA = r"[A-Z][A-Za-z\-]+"
+BULAN = {"Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus",
+         "September", "Oktober", "November", "Desember"}
 KUTIP = re.compile(rf"({NAMA})(?: et al\.| & ({NAMA}))?,? \(?((?:19|20)\d\d)\)?")
 
 
@@ -41,6 +43,8 @@ def main():
         t = re.sub(r"```.*?```", "", t, flags=re.S)
         for m in KUTIP.finditer(t):
             penulis, tahun = m.group(1), m.group(3)
+            if penulis in BULAN:
+                continue  # tanggal seperti "September 2026" bukan kutipan
             if (penulis, tahun) in entri or re.search(rf"\b{penulis}\b.*?{tahun}", m.group(0)):
                 dikutip.setdefault((penulis, tahun), set()).add(nama[:10])
 

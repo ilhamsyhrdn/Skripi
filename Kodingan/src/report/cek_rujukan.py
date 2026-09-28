@@ -19,12 +19,20 @@ BAB = ["00_Halaman_Depan_dan_Abstrak.md", "BAB_I_Pendahuluan.md", "BAB_II_Tinjau
 
 def main(rinci=False):
     judul_tabel, judul_gambar, bagian = {}, {}, set()
+    persamaan = set()
     teks = {}
     for nama in BAB:
         baris = (NASKAH / nama).read_text(encoding="utf-8").splitlines()
         teks[nama] = baris
+        bab, urut = 0, 0
         for i, b in enumerate(baris):
             s = b.strip()
+            m = re.match(r"^# BAB ([IVX]+)$", s)
+            if m:
+                bab, urut = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5}[m.group(1)], 0
+            if s.startswith("$$"):
+                urut += 1
+                persamaan.add(f"{bab}.{urut}")
             m = re.match(r"^#{2,3}\s+(\d+\.\d+(?:\.\d+)?)\s", s)
             if m:
                 bagian.add(m.group(1))
@@ -46,6 +54,10 @@ def main(rinci=False):
                 kode = not kode
             if kode or not s or s.startswith("![") or s.startswith("#"):
                 continue
+            for nomor in re.findall(r"persamaan \((\d+\.\d+)\)", s):
+                if nomor not in persamaan:
+                    hilang += 1
+                    print(f"TIDAK ADA  {nama}:{i}  persamaan ({nomor})  <- {s[:90]}")
             for jenis, nomor in re.findall(r"\b(Tabel|Gambar|Bagian)\s+(\d+\.\d+(?:\.\d+)?)", s):
                 # judul tabel/gambar itu sendiri bukan rujukan
                 if re.match(rf"^\*?{jenis} {re.escape(nomor)} ", s) and jenis != "Bagian":
@@ -58,7 +70,7 @@ def main(rinci=False):
                 elif rinci and jenis != "Bagian":
                     j = s.find(f"{jenis} {nomor}")
                     print(f"{nama[:10]}:{i:<4} {jenis} {nomor:5s} = {kamus[nomor][:55]:55s} | ...{s[max(0, j - 50):j + 30]}")
-    print(f"\n{len(judul_tabel)} tabel, {len(judul_gambar)} gambar, {len(bagian)} bagian terdaftar; "
+    print(f"\n{len(judul_tabel)} tabel, {len(judul_gambar)} gambar, {len(persamaan)} persamaan, {len(bagian)} bagian terdaftar; "
           f"{hilang} rujukan tanpa sasaran")
     sys.exit(1 if hilang else 0)
 

@@ -1,89 +1,103 @@
-"""Bangun skripsi lengkap sebagai satu berkas .docx dari bab-bab markdown.
+"""Bangun naskah skripsi (.docx) dari berkas-berkas markdown di folder Naskah Skripsi.
 
-Format mengikuti skripsi acuan (skripsi teman pengguna tentang klasifikasi
-tumor otak) yang diukur langsung dari PDF-nya:
+Format disalin dari template resmi program studi, yaitu berkas
+"Templete Penyusunan  SKRIPSI.docx", beserta aturan pada komentar-komentarnya:
 
-- A4, margin kiri 4 cm, atas-kanan-bawah 3 cm, Times New Roman 12 pt untuk
-  seluruh teks termasuk judul bab dan judul sub-bab.
-- Isi rata kiri-kanan, spasi ganda, inden baris pertama 1,27 cm; abstrak
-  berspasi tunggal.
-- Judul tabel di atas tabel, 11 pt biasa; isi tabel 11 pt; kepala tabel tebal
-  berlatar #FFF2CC dan diulang pada setiap halaman; keterangan gambar di bawah
-  gambar, 12 pt biasa.
-- Nomor halaman di tengah bawah pada halaman awal (romawi) dan pada halaman
-  pembuka tiap bab, serta di kanan atas pada halaman isi lainnya.
-- Halaman judul tanpa nomor; lembar pengesahan berbingkai garis ganda.
+- A4, margin atas 4 cm, kiri 4 cm, bawah 3 cm, kanan 3 cm; header dan footer 1,25 cm.
+- Times New Roman 12 pt; isi rata kiri-kanan, 2 spasi, inden baris pertama 1 cm.
+- Judul bagian awal dan judul bab tebal, kapital, di tengah, dan berjarak 4 spasi
+  ke isinya.
+- Subbab dan sub-subbab tebal dengan nomor tanpa titik di akhir, berjarak 12 pt
+  dari uraian subbab sebelumnya.
+- Judul tabel di atas tabel dan keterangan gambar di bawah gambar dengan huruf
+  standar; isi tabel 1 spasi; kepala tabel berlatar C5E0B3 dan diulang di setiap
+  halaman.
+- Persamaan bernomor per bab, misalnya (2.1), di sisi kanan.
+- Kode program berada di dalam kotak, 10 pt, 1 spasi, dan diawali keterangan
+  nama kodenya.
+- Nomor halaman romawi di tengah bawah pada bagian awal; angka di tengah bawah
+  pada halaman pertama bab dan di kanan atas pada halaman berikutnya.
 
-Daftar isi, daftar tabel, dan daftar gambar ditulis sebagai field Word, lalu
-diisi dengan nomor halaman sungguhan oleh update_fields_word.ps1.
+Daftar isi, daftar tabel, daftar gambar, dan daftar lampiran ditulis sebagai field
+Word, lalu diisi nomor halamannya oleh update_fields_word.ps1.
+
+Pemakaian:
+    python build_docx.py          naskah lengkap  -> Skripsi_Lengkap.docx
+    python build_docx.py bab1     sampai Bab I    -> Skripsi_Bab_I.docx
 """
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 from docx import Document
 from docx.enum.section import WD_SECTION
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT, WD_TAB_LEADER
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, Pt, RGBColor
+from docx.shared import Cm, Length, Pt, RGBColor
 
 SRC = Path("D:/skripsi/Naskah Skripsi")
 FIG = Path("D:/skripsi/Kodingan/outputs/figures/final")
-OUT = SRC / "Skripsi_Lengkap.docx"
+LOGO = SRC / "Gambar" / "Logo_Unpad.jpeg"
+MML2OMML = Path(r"C:\Program Files\Microsoft Office\root\Office16\MML2OMML.XSL")
 
 BODY_FONT = "Times New Roman"
-MONO_FONT = "Courier New"   # huruf kode pada skripsi acuan
+MONO_FONT = "Consolas"         # kode program: 9 s.d. 11 pt, lebih kecil dari isi
+MONO_EM = 0.5498               # lebar satu karakter Consolas (1126/2048 em)
 BODY_SIZE = Pt(12)
-TABLE_SIZE = Pt(11)
-INDENT = Cm(1.27)
-TEXT_WIDTH_CM = 14.0          # 21 cm - 4 cm - 3 cm
-HEADER_FILL = "FFF2CC"        # warna kepala tabel pada skripsi acuan
+CODE_SIZE = Pt(9)
+TABLE_SIZES = (Pt(12), Pt(11), Pt(10))
+INDENT = Cm(1.0)
+TEXT_WIDTH_CM = 14.0           # 21 cm - 4 cm - 3 cm
+HEADER_FILL = "C5E0B3"         # warna kepala tabel pada template
+BARIS = 13.8                   # tinggi satu baris spasi tunggal Times New Roman 12 pt
+JARAK_SUBBAB = Pt(12)
 
-JUDUL_ID = [("OPTIMASI ", ""), ("TRANSFER LEARNING", "i"), (" EFFICIENTNET-B0 UNTUK KLASIFIKASI "
-            "KANKER PARU-PARU PADA CITRA ", ""), ("COMPUTED TOMOGRAPHY", "i"),
-            (" (CT) MENGGUNAKAN ", ""), ("FINE-TUNING", "i"), (", ", ""),
-            ("DATA AUGMENTATION", "i"), (", DAN ", ""), ("ENSEMBLE MODEL", "i")]
-JUDUL_EN = ("OPTIMIZATION OF EFFICIENTNET-B0 TRANSFER LEARNING FOR LUNG CANCER "
-            "CLASSIFICATION ON COMPUTED TOMOGRAPHY (CT) IMAGES USING FINE-TUNING, "
-            "DATA AUGMENTATION, AND ENSEMBLE MODEL")
+BAB = ["BAB_I_Pendahuluan.md", "BAB_II_Tinjauan_Pustaka.md",
+       "BAB_III_Analisis_dan_Perancangan.md", "BAB_IV_Hasil_dan_Pembahasan.md",
+       "BAB_V_Kesimpulan_dan_Saran.md"]
 
-# jalur gambar di markdown -> (berkas gambar final, lebar cm)
+# jalur gambar di markdown -> (berkas gambar final, lebar cm); lebar tidak boleh
+# melebihi lebar teks 14 cm
 FIGURES = {
-    "Gambar/Gambar_2.1_Arsitektur_CNN.png": ("gambar_2_1_arsitektur_cnn.png", 15.0),
-    "Gambar/Gambar_2.2_Blok_MBConv_EfficientNet.png": ("gambar_2_2_blok_mbconv.png", 15.0),
+    "Gambar/Gambar_2.1_Arsitektur_CNN.png": ("gambar_2_1_arsitektur_cnn.png", 14.0),
+    "Gambar/Gambar_2.2_Blok_MBConv_EfficientNet.png": ("gambar_2_2_blok_mbconv.png", 14.0),
     "Gambar/Gambar_2.3_Blok_Residual_ResNet50.png": ("gambar_2_3_blok_residual.png", 14.0),
-    "Gambar/Gambar_3.1_Diagram_Alur_Penelitian.png": ("gambar_3_1_alur_penelitian.png", 9.5),
+    "Gambar/Gambar_3.1_Diagram_Alur_Penelitian.png": ("gambar_3_1_alur_penelitian.png", 14.0),
     "Gambar/Gambar_3.2_Sampel_Kaggle_Al-Yasriy.png": ("gambar_3_2_sampel_kaggle_alyasriy.png", 9.5),
     "Gambar/Gambar_3.3_Sampel_Kaggle_Rathi.png": ("gambar_3_3_sampel_kaggle_rathi.png", 9.5),
     "Gambar/Gambar_3.4_Sampel_LIDC.png": ("gambar_3_4_sampel_lidc.png", 9.5),
-    "Gambar/Gambar_3.5_Use_Case_Diagram.png": ("gambar_3_5_use_case.png", 14.5),
-    "Gambar/Gambar_4.1_Kurva_Pelatihan.png": ("gambar_4_1_kurva_pelatihan.png", 14.0),
-    "Gambar/Gambar_4.2_Kontribusi_Finetuning.png": ("gambar_4_2_kontribusi_finetuning.png", 14.0),
-    "Gambar/Gambar_4.3_Kontribusi_Augmentasi.png": ("gambar_4_3_kontribusi_augmentasi.png", 14.0),
-    "Gambar/Gambar_4.4_Kontribusi_Ensemble.png": ("gambar_4_4_kontribusi_ensemble.png", 14.0),
-    "Gambar/Gambar_4.5_Confusion_Matrix_Stacking.png": ("gambar_4_5_confusion_matrix.png", 10.0),
-    "Gambar/Gambar_4.6_Kurva_ROC_Stacking.png": ("gambar_4_6_kurva_roc.png", 11.0),
-    "Gambar/Gambar_4.7_Sweep_Ambang_Keputusan.png": ("gambar_4_7_sweep_ambang.png", 14.0),
-    "Gambar/Gambar_4.8_Performa_Per_Sumber.png": ("gambar_4_8_performa_per_sumber.png", 12.5),
-    "Gambar/Gambar_4.9_Confusion_Matrix_Validasi_Biner.png": ("gambar_4_cm_validasi_biner.png", 9.0),
-    "Gambar/Gambar_4.10_Aplikasi_Beranda.png": ("gambar_4_9_aplikasi_beranda.png", 14.0),
-    "Gambar/Gambar_4.11_Aplikasi_Prediksi.png": ("gambar_4_10_aplikasi_prediksi.png", 14.0),
-    "Gambar/Gambar_4.12_Aplikasi_Tolak.png": ("gambar_4_11_aplikasi_tolak.png", 14.0),
+    "Gambar/Gambar_3.5_Use_Case_Diagram.png": ("gambar_3_5_use_case.png", 14.0),
+    "Gambar/Gambar_4.1_Confusion_Matrix_Stacking.png": ("gambar_4_5_confusion_matrix.png", 10.0),
+    "Gambar/Gambar_4.2_Kurva_ROC_Stacking.png": ("gambar_4_6_kurva_roc.png", 11.0),
+    "Gambar/Gambar_4.3_Confusion_Matrix_Validasi_Biner.png": ("gambar_4_cm_validasi_biner.png", 9.0),
+    "Gambar/Gambar_4.4_Aplikasi_Beranda.png": ("gambar_4_9_aplikasi_beranda.png", 14.0),
+    "Gambar/Gambar_4.5_Aplikasi_Prediksi.png": ("gambar_4_10_aplikasi_prediksi.png", 14.0),
+    "Gambar/Gambar_4.6_Aplikasi_Tolak.png": ("gambar_4_11_aplikasi_tolak.png", 14.0),
 }
+
+# keadaan penomoran selama penyusunan: nomor bab (untuk persamaan), urutan
+# persamaan, dan apakah paragraf berikutnya tepat berada di bawah judul
+STATE = {"bab": 0, "eq": 0, "bawah_judul": False, "tanpa_inden": False}
+ROMAWI = {"I": 1, "II": 2, "III": 3, "IV": 4, "V": 5}
 
 
 # ------------------------------------------------------------------ utilitas
-def _font(run, size=BODY_SIZE, bold=None, italic=None, name=BODY_FONT):
+def _font(run, size=BODY_SIZE, bold=None, italic=None, name=BODY_FONT, underline=None):
     run.font.name = name
-    run._element.get_or_add_rPr().get_or_add_rFonts().set(qn("w:eastAsia"), name)
+    rf = run._element.get_or_add_rPr().get_or_add_rFonts()
+    for a in ("w:ascii", "w:hAnsi", "w:eastAsia", "w:cs"):
+        rf.set(qn(a), name)
     run.font.size = size
     if bold is not None:
         run.bold = bold
     if italic is not None:
         run.italic = italic
+    if underline is not None:
+        run.underline = underline
     return run
 
 
@@ -99,67 +113,132 @@ def _field(run, instr_text):
         run._r.append(el)
 
 
+def _pf(p, line=2.0, before=0, after=0, indent=None, align=None, keep=None):
+    pf = p.paragraph_format
+    pf.line_spacing = line
+    pf.space_before = before if isinstance(before, Length) else Pt(before)
+    pf.space_after = after if isinstance(after, Length) else Pt(after)
+    pf.first_line_indent = Cm(0) if indent is None else indent
+    if align is not None:
+        p.alignment = align
+    if keep is not None:
+        pf.keep_with_next = keep
+    return pf
+
+
 # ------------------------------------------------------------------- dokumen
+def _gaya(st, size=BODY_SIZE, bold=False, italic=False):
+    """Samakan gaya ke Times New Roman hitam; atribut huruf dan warna tema dibuang
+    karena di OOXML atribut tema mengalahkan nama huruf dan warna yang ditulis."""
+    st.font.name = BODY_FONT
+    st.font.size = size
+    st.font.bold = bold
+    st.font.italic = italic
+    st.font.color.rgb = RGBColor(0, 0, 0)
+    rpr = st.element.get_or_add_rPr()
+    rf = rpr.get_or_add_rFonts()
+    for a in ("w:asciiTheme", "w:hAnsiTheme", "w:eastAsiaTheme", "w:cstheme"):
+        if rf.get(qn(a)) is not None:
+            del rf.attrib[qn(a)]
+    for a in ("w:ascii", "w:hAnsi", "w:eastAsia", "w:cs"):
+        rf.set(qn(a), BODY_FONT)
+    color = rpr.find(qn("w:color"))
+    if color is not None:
+        for a in ("w:themeColor", "w:themeShade", "w:themeTint"):
+            if color.get(qn(a)) is not None:
+                del color.attrib[qn(a)]
+
+
+def _gaya_baru(doc, name, base="Normal"):
+    try:
+        return doc.styles[name]
+    except KeyError:
+        st = doc.styles.add_style(name, 1)
+        st.base_style = doc.styles[base]
+        st.quick_style = False
+        return st
+
+
 def setup_document():
     doc = Document()
     normal = doc.styles["Normal"]
-    normal.font.name = BODY_FONT
-    normal.font.size = BODY_SIZE
-    normal.element.rPr.rFonts.set(qn("w:eastAsia"), BODY_FONT)
+    _gaya(normal)
     pf = normal.paragraph_format
-    pf.space_before = Pt(0)
-    pf.space_after = Pt(0)
-    pf.line_spacing = 2.0
+    pf.space_before = Pt(0); pf.space_after = Pt(0); pf.line_spacing = 2.0
 
     # Gaya judul bawaan dipakai agar field daftar isi dapat membacanya.
-    for name, align, before, after in (
-        ("Heading 1", WD_ALIGN_PARAGRAPH.CENTER, 0, 24),
-        ("Heading 2", WD_ALIGN_PARAGRAPH.LEFT, 6, 0),
-        ("Heading 3", WD_ALIGN_PARAGRAPH.LEFT, 6, 0),
-    ):
+    for name, align in (("Heading 1", WD_ALIGN_PARAGRAPH.CENTER),
+                        ("Heading 2", WD_ALIGN_PARAGRAPH.LEFT),
+                        ("Heading 3", WD_ALIGN_PARAGRAPH.LEFT)):
         st = doc.styles[name]
-        st.font.name = BODY_FONT
-        st.font.size = BODY_SIZE
-        st.font.bold = True
-        st.font.italic = False
-        st.font.color.rgb = RGBColor(0, 0, 0)
-        st.element.rPr.rFonts.set(qn("w:eastAsia"), BODY_FONT)
-        st.element.rPr.rFonts.set(qn("w:ascii"), BODY_FONT)
-        st.element.rPr.rFonts.set(qn("w:hAnsi"), BODY_FONT)
+        _gaya(st, bold=True)
         st.paragraph_format.alignment = align
         st.paragraph_format.line_spacing = 2.0
-        st.paragraph_format.space_before = Pt(before)
-        st.paragraph_format.space_after = Pt(after)
+        st.paragraph_format.space_before = Pt(0)
+        st.paragraph_format.space_after = Pt(0)
         st.paragraph_format.first_line_indent = Cm(0)
         st.paragraph_format.keep_with_next = True
 
-    # Gaya entri daftar isi: Times New Roman, spasi 1,5, tanpa jarak antar entri.
-    for lvl in (1, 2, 3):
-        try:
-            st = doc.styles[f"TOC {lvl}"]
-        except KeyError:
-            st = doc.styles.add_style(f"TOC {lvl}", 1)
-            st.base_style = normal
-        st.font.name = BODY_FONT
-        st.font.size = BODY_SIZE
-        st.paragraph_format.line_spacing = 1.5
-        st.paragraph_format.space_after = Pt(0)
-        st.paragraph_format.first_line_indent = Cm(0)
-        st.paragraph_format.left_indent = Cm({1: 0, 2: 0.6, 3: 1.4}[lvl])
+    # judul yang tampil seperti judul bab tetapi tidak masuk daftar isi
+    st = _gaya_baru(doc, "Judul Tanpa Daftar")
+    _gaya(st, bold=True)
+    st.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # Keterangan gambar 12 pt dan judul tabel 11 pt, masing-masing gaya
-    # tersendiri agar daftar gambar dan daftar tabel terbentuk terpisah.
-    for name, size in (("Caption Gambar", BODY_SIZE), ("Caption Tabel", TABLE_SIZE)):
-        st = doc.styles.add_style(name, 1)
-        st.base_style = normal
-        st.font.name = BODY_FONT
-        st.font.size = size
-        st.font.bold = False
-        st.element.rPr.rFonts.set(qn("w:eastAsia"), BODY_FONT)
+    # entri daftar isi mengikuti gaya TOC template: tab kanan bertitik di tepi
+    # kanan teks, nomor subbab di 0 cm dan judulnya di 1 cm
+    kanan = Cm(TEXT_WIDTH_CM)
+    for lvl, (line, before, after, left, hang) in {
+            1: (1.5, 6, 0, 0.0, 0.0),
+            2: (1.15, 0, 5, 1.0, 1.0),
+            3: (1.15, 0, 5, 2.25, 1.25),
+            9: (1.5, 0, 0, 2.0, 2.0)}.items():
+        # gaya bawaan Word bernama huruf kecil ("toc 1"); gaya "TOC 1" buatan
+        # sendiri tidak akan dipakai oleh field daftar isi
+        st = _gaya_baru(doc, f"toc {lvl}")
+        # jadikan definisi gaya bawaan Word (styleId TOC1, bukan gaya kustom);
+        # bila ditandai kustom, Word menamainya ulang dan memakai gayanya sendiri
+        st.element.set(qn("w:styleId"), f"TOC{lvl}")
+        if st.element.get(qn("w:customStyle")) is not None:
+            del st.element.attrib[qn("w:customStyle")]
+        _gaya(st)
+        f = st.paragraph_format
+        f.line_spacing = line
+        f.space_before = Pt(before); f.space_after = Pt(after)
+        f.left_indent = Cm(left); f.first_line_indent = Cm(-hang)
+        f.right_indent = Cm(0.8)
+        if hang:
+            f.tab_stops.add_tab_stop(Cm(left))
+        f.tab_stops.add_tab_stop(kanan, WD_TAB_ALIGNMENT.RIGHT, WD_TAB_LEADER.DOTS)
+
+    # keterangan gambar dan judul tabel: huruf standar, di tengah, gaya tersendiri
+    # agar daftar gambar dan daftar tabel terbentuk terpisah
+    for name in ("Caption Gambar", "Caption Tabel"):
+        st = _gaya_baru(doc, name)
+        _gaya(st)
         st.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        st.paragraph_format.line_spacing = 1.0
+        st.paragraph_format.line_spacing = 2.0
         st.paragraph_format.first_line_indent = Cm(0)
-        st.quick_style = False
+
+    st = _gaya_baru(doc, "Judul Lampiran")
+    _gaya(st, bold=True)
+    st.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    st.paragraph_format.first_line_indent = Cm(0)
+    st.paragraph_format.keep_with_next = True
+
+    # bingkai halaman tidak ikut mengelilingi header dan footer (nomor halaman)
+    # (urutan skema OOXML: bordersDoNotSurroundHeader sebelum ...Footer, dan
+    # keduanya sesudah w:zoom)
+    settings = doc.settings.element
+    sebelumnya = settings.find(qn("w:zoom"))
+    for tag in ("w:bordersDoNotSurroundHeader", "w:bordersDoNotSurroundFooter"):
+        el = settings.find(qn(tag))
+        if el is None:
+            el = OxmlElement(tag)
+            if sebelumnya is not None:
+                sebelumnya.addnext(el)
+            else:
+                settings.insert(0, el)
+        sebelumnya = el
 
     _page_setup(doc.sections[0])
     return doc
@@ -168,10 +247,10 @@ def setup_document():
 def _page_setup(section):
     section.page_width = Cm(21.0)
     section.page_height = Cm(29.7)
+    section.top_margin = Cm(4.0)
     section.left_margin = Cm(4.0)
-    section.right_margin = Cm(3.0)
-    section.top_margin = Cm(3.0)
     section.bottom_margin = Cm(3.0)
+    section.right_margin = Cm(3.0)
     section.header_distance = Cm(1.25)
     section.footer_distance = Cm(1.25)
 
@@ -225,7 +304,7 @@ def _unlink(section):
 
 
 def number_front(section, start=None, show=True):
-    """Halaman awal: nomor romawi di tengah bawah (atau disembunyikan)."""
+    """Bagian awal: nomor romawi di tengah bawah (atau disembunyikan)."""
     _unlink(section)
     section.different_first_page_header_footer = False
     _clear(section.header)
@@ -237,7 +316,7 @@ def number_front(section, start=None, show=True):
 
 
 def number_chapter(section, start=None):
-    """Halaman bab: tengah bawah di halaman pembuka, kanan atas di halaman lain."""
+    """Halaman bab: tengah bawah di halaman pertama, kanan atas di halaman lain."""
     _unlink(section)
     section.different_first_page_header_footer = True
     _clear(section.first_page_header)
@@ -248,9 +327,8 @@ def number_chapter(section, start=None):
 
 
 def new_section(doc):
-    """Section baru mewarisi seluruh pengaturan section sebelumnya, termasuk
-    bingkai halaman, sehingga bingkai lembar pengesahan harus dibuang di sini
-    agar tidak ikut muncul pada halaman-halaman berikutnya."""
+    """Section baru mewarisi pengaturan section sebelumnya, termasuk bingkai
+    halaman, sehingga bingkai lembar pengesahan dibuang di sini."""
     s = doc.add_section(WD_SECTION.NEW_PAGE)
     _page_setup(s)
     for b in s._sectPr.findall(qn("w:pgBorders")):
@@ -259,16 +337,18 @@ def new_section(doc):
 
 
 def page_border(section):
-    """Bingkai garis ganda (tebal di luar, tipis di dalam) seperti lembar
-    pengesahan skripsi acuan."""
+    """Bingkai garis ganda (tebal di luar, tipis di dalam) di sekeliling teks,
+    seperti bingkai lembar pengesahan pada template. Jaraknya ke teks mengikuti
+    posisi bingkai template: sekitar 1 cm di atas, 0,6 cm di kiri, 0,8 cm di
+    kanan, dan 0,2 cm di bawah teks, sehingga nomor halaman berada di luar bingkai."""
     sectPr = section._sectPr
     b = OxmlElement("w:pgBorders")
-    b.set(qn("w:offsetFrom"), "page")
-    for edge in ("top", "left", "bottom", "right"):
+    b.set(qn("w:offsetFrom"), "text")
+    for edge, space in (("top", "29"), ("left", "17"), ("bottom", "6"), ("right", "23")):
         el = OxmlElement(f"w:{edge}")
         el.set(qn("w:val"), "thickThinSmallGap")
         el.set(qn("w:sz"), "24")
-        el.set(qn("w:space"), "24")
+        el.set(qn("w:space"), space)
         el.set(qn("w:color"), "000000")
         b.append(el)
     _sisip_sectpr(sectPr, b, ("lnNumType", "pgNumType") + _SESUDAH_PGNUM)
@@ -276,7 +356,8 @@ def page_border(section):
 
 # ------------------------------------------------------------ teks sebaris
 def _tokens(text):
-    """Pecah teks menjadi potongan (isi, tebal, miring, kode).
+    """Pecah teks menjadi potongan (isi, tebal, miring, kode); kode bernilai
+    "math" untuk rumus sebaris di antara tanda dolar.
 
     Ditulis sebagai pemindai sederhana, bukan satu regex, supaya teks tebal
     yang memuat kata miring seperti **ResNet50 *fold* 4** terbaca benar.
@@ -303,7 +384,7 @@ def _tokens(text):
             j = text.find("$", i + 1)
             if j > i + 1:
                 flush()
-                out.append((text[i + 1:j], bold, True, False))
+                out.append((text[i + 1:j], bold, True, "math"))
                 i = j + 1
                 continue
         if text.startswith("**", i):
@@ -318,170 +399,226 @@ def _tokens(text):
     return out
 
 
-def add_runs(paragraph, text, size=BODY_SIZE, force_bold=None):
+def _run_kode(paragraph, teks, size):
+    """Run kode program. Tanda hubungnya dibuat tak-terpotong (w:noBreakHyphen),
+    supaya Word tidak memenggal "pseudo-knn" atau "1e-3" di ujung baris."""
+    bagian = teks.split("-")
+    r = paragraph.add_run(bagian[0])
+    for b in bagian[1:]:
+        r._r.append(OxmlElement("w:noBreakHyphen"))
+        t = OxmlElement("w:t")
+        t.set(qn("xml:space"), "preserve")
+        t.text = b
+        r._r.append(t)
+    _font(r, size=size, name=MONO_FONT)
+    return r
+
+
+def add_runs(paragraph, text, size=BODY_SIZE, force_bold=None, force_italic=None,
+             underline=None):
     text = text.replace(" -- ", " – ")
     for isi, b, it, kode in _tokens(text):
         if not isi:
             continue
-        r = paragraph.add_run(isi)
+        if kode == "math":
+            # rumus sebaris ditulis sebagai persamaan Word, sama dengan rumus bernomor
+            paragraph._p.append(latex_ke_omml(isi))
+            continue
         if kode:
-            _font(r, size=Pt(size.pt - 1.5), name=MONO_FONT)
+            _run_kode(paragraph, isi, Pt(size.pt - 1.5))
         else:
+            r = paragraph.add_run(isi)
             _font(r, size=size, bold=b if force_bold is None else (force_bold or b),
-                  italic=it)
+                  italic=it if force_italic is None else force_italic, underline=underline)
     return paragraph
 
 
 # ----------------------------------------------------------------- paragraf
-def body_paragraph(doc, text, indent=True, spacing=2.0, align=WD_ALIGN_PARAGRAPH.JUSTIFY):
+def body_paragraph(doc, text, indent=True, spacing=2.0, align=WD_ALIGN_PARAGRAPH.JUSTIFY,
+                   italic=None):
     p = doc.add_paragraph()
-    p.alignment = align
-    pf = p.paragraph_format
-    pf.line_spacing = spacing
-    pf.space_after = Pt(0)
-    pf.first_line_indent = INDENT if indent else Cm(0)
-    add_runs(p, text)
+    _pf(p, line=spacing, indent=INDENT if indent else Cm(0), align=align)
+    add_runs(p, text, force_italic=italic)
+    STATE["bawah_judul"] = False
     return p
 
 
 def caption(doc, text, style):
     p = doc.add_paragraph(style=style)
-    pf = p.paragraph_format
-    if style == "Caption Tabel":
-        pf.space_before = Pt(12); pf.space_after = Pt(4); pf.keep_with_next = True
-        size = TABLE_SIZE
-    else:
-        pf.space_before = Pt(4); pf.space_after = Pt(12)
-        size = BODY_SIZE
-    add_runs(p, text, size=size)
+    _pf(p, line=2.0, align=WD_ALIGN_PARAGRAPH.CENTER, keep=(style == "Caption Tabel"))
+    add_runs(p, text)
+    STATE["bawah_judul"] = False
     return p
 
 
 def chapter_heading(doc, bab, title):
-    """Satu paragraf Heading 1 berisi dua baris ("BAB I" lalu judulnya)."""
+    """Satu paragraf Heading 1 berisi dua baris ("BAB I" lalu judulnya). Jarak
+    4 spasi ke isi dihitung dari baris judul: satu baris 2 spasi ditambah 2 baris."""
     p = doc.add_paragraph(style="Heading 1")
-    _font(p.add_run(bab.upper()), bold=True)
-    if title:
-        p.runs[-1].add_break()
-        add_runs(p, title.upper(), force_bold=True)
+    _pf(p, line=2.0, after=Pt(2 * BARIS), align=WD_ALIGN_PARAGRAPH.CENTER, keep=True)
+    _font(p.add_run(bab.upper()), bold=True).add_break()
+    add_runs(p, title.upper(), force_bold=True)
+    STATE["bab"] = ROMAWI[bab.split()[1]]
+    STATE["eq"] = 0
+    STATE["bawah_judul"] = True
     return p
 
 
-def front_heading(doc, text):
-    p = doc.add_paragraph(style="Heading 1")
-    add_runs(p, text.upper(), force_bold=True)
+def front_heading(doc, text, in_toc=True):
+    """Judul bagian awal, daftar pustaka, dan lampiran: 4 spasi ke isinya."""
+    p = doc.add_paragraph(style="Heading 1" if in_toc else "Judul Tanpa Daftar")
+    _pf(p, line=1.0, after=Pt(3 * BARIS), align=WD_ALIGN_PARAGRAPH.CENTER, keep=True)
+    add_runs(p, text.upper() if not text.startswith("*") else text, force_bold=True)
+    STATE["bawah_judul"] = True
     return p
 
 
 def section_heading(doc, text, level=2):
     p = doc.add_paragraph(style=f"Heading {min(level, 3)}")
-    pf = p.paragraph_format
-    pf.left_indent = Cm(0)
-    pf.first_line_indent = Cm(0)
+    gantung = Cm(1.0 if level == 2 else 1.25)
+    pf = _pf(p, line=2.0, before=Pt(0) if STATE["bawah_judul"] else JARAK_SUBBAB,
+             align=WD_ALIGN_PARAGRAPH.LEFT, keep=True)
+    pf.left_indent = gantung
+    pf.first_line_indent = -gantung
+    pf.tab_stops.add_tab_stop(gantung)
     m = re.match(r"^((?:\d+\.)+\d*)\s+(.*)$", text)
     if m:
         num, rest = m.groups()
-        pf.tab_stops.add_tab_stop(Cm(1.0 if level == 2 else 1.4))
         _font(p.add_run(f"{num}\t"), bold=True)
         add_runs(p, rest, force_bold=True)
     else:
         add_runs(p, text, force_bold=True)
+    STATE["bawah_judul"] = True
     return p
 
 
-def add_list_item(doc, marker, text, level=0):
+def judul_butir(doc, text, jarak=True):
+    """Butir berjudul di bawah subbab, misalnya "A. Dataset Kaggle": tebal,
+    rata kiri, nomor huruf/angka di 0 cm dan judulnya di 0,5 cm. Label bab pada
+    sistematika penulisan (jarak=False) ditulis rapat seperti pada template."""
     p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    pf = p.paragraph_format
-    pf.line_spacing = 2.0
-    pf.space_after = Pt(0)
-    pf.left_indent = Cm(0.8 + level * 0.8)
-    pf.first_line_indent = Cm(-0.8)
-    pf.tab_stops.add_tab_stop(Cm(0.8 + level * 0.8))
-    add_runs(p, f"{marker}\t{text}")
+    pf = _pf(p, line=2.0, before=JARAK_SUBBAB if jarak and not STATE["bawah_judul"] else Pt(0),
+             align=WD_ALIGN_PARAGRAPH.LEFT, keep=True)
+    m = re.match(r"^([A-Z0-9]{1,2})\.\s+(.*)$", text)
+    if m:
+        pf.left_indent = Cm(0.5); pf.first_line_indent = Cm(-0.5)
+        pf.tab_stops.add_tab_stop(Cm(0.5))
+        _font(p.add_run(f"{m.group(1)}.\t"), bold=True)
+        add_runs(p, m.group(2), force_bold=True)
+    else:
+        add_runs(p, text, force_bold=True)
+    STATE["bawah_judul"] = True
     return p
+
+
+def add_list_item(doc, marker, text, level=0, step=0.75):
+    p = doc.add_paragraph()
+    left = step * (level + 1)
+    pf = _pf(p, line=2.0, align=WD_ALIGN_PARAGRAPH.JUSTIFY)
+    pf.left_indent = Cm(left)
+    pf.first_line_indent = Cm(-step)
+    pf.tab_stops.add_tab_stop(Cm(left))
+    add_runs(p, f"{marker}\t{text}")
+    STATE["bawah_judul"] = False
+    return p
+
+
+def _set_cell_border(cell, sz="4"):
+    tcPr = cell._tc.get_or_add_tcPr()
+    borders = OxmlElement("w:tcBorders")
+    for edge in ("top", "left", "bottom", "right"):
+        el = OxmlElement(f"w:{edge}")
+        el.set(qn("w:val"), "single"); el.set(qn("w:sz"), sz); el.set(qn("w:color"), "000000")
+        borders.append(el)
+    tcPr.append(borders)
+
+
+def _gap(doc):
+    """Satu baris kosong berspasi tunggal sesudah tabel atau kotak kode."""
+    g = doc.add_paragraph()
+    _pf(g, line=1.0)
+    return g
 
 
 def add_code_block(doc, lines):
-    p = doc.add_paragraph()
-    pf = p.paragraph_format
-    pf.line_spacing = 1.0
-    pf.left_indent = Cm(0.3)
-    pf.right_indent = Cm(0.2)
-    pf.first_line_indent = Cm(0)
-    pf.space_before = Pt(6)
-    pf.space_after = Pt(12)
-    pPr = p._p.get_or_add_pPr()
-    borders = OxmlElement("w:pBdr")
-    for edge in ("top", "left", "bottom", "right"):
-        el = OxmlElement(f"w:{edge}")
-        el.set(qn("w:val"), "single"); el.set(qn("w:sz"), "6")
-        el.set(qn("w:space"), "6"); el.set(qn("w:color"), "808080")
-        borders.append(el)
-    pPr.append(borders)
+    """Kode program di dalam kotak satu sel seperti pada template: 9 pt, 1 spasi.
+
+    Baris yang lebih panjang dari lebar kotak dilipat Word. Lipatannya dibuat
+    menjorok empat karakter lebih dalam dari indentasi baris asalnya (paling
+    jauh sepertiga lebar kotak), supaya tidak terbaca sebagai baris baru di
+    kolom paling kiri, karena indentasi pada Python bermakna."""
+    while lines and not lines[-1].strip():
+        lines = lines[:-1]
+    lebar_huruf = MONO_EM * CODE_SIZE.pt
+    muat = int((Cm(TEXT_WIDTH_CM - 0.381).pt) / lebar_huruf) - 1   # karakter per baris
+    t = doc.add_table(rows=1, cols=1)
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t.autofit = False
+    cell = t.cell(0, 0)
+    cell.width = Cm(TEXT_WIDTH_CM)
+    _set_cell_border(cell)
     for k, line in enumerate(lines):
-        r = _font(p.add_run(line), size=Pt(10), name=MONO_FONT)
-        if k < len(lines) - 1:
-            r.add_break()
-    return p
+        p = cell.paragraphs[0] if k == 0 else cell.add_paragraph()
+        teks = line.rstrip()
+        isi = teks.lstrip(" ")
+        n = len(teks) - len(isi)
+        if isi and n + len(isi.split()[0]) > muat:
+            # baris lanjutan rata-sejajar di dalam kurung yang tidak muat: geser ke
+            # kiri seperlunya (spasi di dalam kurung tidak bermakna bagi Python)
+            n = max(0, muat - len(isi))
+            teks = " " * n + isi
+        pf = _pf(p, line=1.0, align=WD_ALIGN_PARAGRAPH.LEFT)
+        lipatan = Pt(min(n + 4, muat // 3) * lebar_huruf)
+        pf.left_indent, pf.first_line_indent = lipatan, -lipatan
+        _run_kode(p, teks, CODE_SIZE)
+    _gap(doc)
+    STATE["bawah_judul"] = False
 
 
 # ------------------------------------------------------------- gambar/rumus
-_MATH_DIR = Path("D:/skripsi/Kodingan/outputs/figures/math")
+_XSL = {}
 
 
-def render_math(latex: str, index: int):
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    _MATH_DIR.mkdir(parents=True, exist_ok=True)
-    out = _MATH_DIR / f"eq_{index:02d}.png"
-    # mathtext paham \frac, \sum, \times; \text{-} dan \qquad perlu dibantu
-    body = latex.strip().replace(r"\text{-}", "-").replace(r"\qquad", r"\ \ \ \ \ ")
-    fig = plt.figure(figsize=(0.01, 0.01))
-    fig.text(0, 0, f"${body}$", fontsize=16)
-    fig.savefig(out, dpi=220, bbox_inches="tight", pad_inches=0.06, transparent=False,
-                facecolor="white")
-    plt.close(fig)
-    return out
+def latex_ke_omml(latex: str):
+    """LaTeX -> MathML (latex2mathml) -> OMML (MML2OMML.XSL bawaan Office), agar
+    persamaan tampil sebagai persamaan Word asli seperti pada template."""
+    from latex2mathml.converter import convert
+    from lxml import etree
+    if "x" not in _XSL:
+        _XSL["x"] = etree.XSLT(etree.parse(str(MML2OMML)))
+    omml = _XSL["x"](etree.fromstring(convert(latex.strip())))
+    root = omml.getroot()
+    if root.tag.endswith("oMathPara"):
+        root = root.find(qn("m:oMath"))
+    from docx.oxml import parse_xml
+    return parse_xml(etree.tostring(root))
 
 
-def add_equation(doc, latex, index):
-    path = render_math(latex, index)
+def add_equation(doc, latex):
+    """Persamaan di tengah dan nomornya rata kanan, misalnya (2.1)."""
+    STATE["eq"] += 1
+    nomor = f"({STATE['bab']}.{STATE['eq']})"
     p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    pf = p.paragraph_format
-    pf.line_spacing = 1.0; pf.space_before = Pt(6); pf.space_after = Pt(6)
-    pf.first_line_indent = Cm(0)
-    from PIL import Image
-    with Image.open(path) as im:
-        w_cm = min(10.0, max(3.2, im.width / 220 * 2.54))
-    p.add_run().add_picture(str(path), width=Cm(w_cm))
+    pf = _pf(p, line=1.5, before=6, after=6, align=WD_ALIGN_PARAGRAPH.LEFT)
+    pf.tab_stops.add_tab_stop(Cm(TEXT_WIDTH_CM / 2), WD_TAB_ALIGNMENT.CENTER)
+    pf.tab_stops.add_tab_stop(Cm(TEXT_WIDTH_CM), WD_TAB_ALIGNMENT.RIGHT)
+    _font(p.add_run("\t"))
+    p._p.append(latex_ke_omml(latex))
+    _font(p.add_run(f"\t{nomor}"))
+    STATE["bawah_judul"] = False
+    return nomor
 
 
 def add_figure(doc, md_path, cap_text):
     fname, width_cm = FIGURES[md_path]
     p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    pf = p.paragraph_format
-    pf.line_spacing = 1.0; pf.space_before = Pt(12); pf.space_after = Pt(0)
-    pf.first_line_indent = Cm(0); pf.keep_with_next = True
-    p.add_run().add_picture(str(FIG / fname), width=Cm(width_cm))
+    _pf(p, line=1.0, before=6, align=WD_ALIGN_PARAGRAPH.CENTER, keep=True)
+    p.add_run().add_picture(str(FIG / fname), width=Cm(min(width_cm, TEXT_WIDTH_CM)))
     caption(doc, cap_text, "Caption Gambar")
 
 
 # ------------------------------------------------------------------- tabel
 CELL_IMG_RE = re.compile(r"^!\[([\d.,]*)\]\((.+?)\)$")
-
-
-def _set_cell_border(cell):
-    tcPr = cell._tc.get_or_add_tcPr()
-    borders = OxmlElement("w:tcBorders")
-    for edge in ("top", "left", "bottom", "right"):
-        el = OxmlElement(f"w:{edge}")
-        el.set(qn("w:val"), "single"); el.set(qn("w:sz"), "4"); el.set(qn("w:color"), "000000")
-        borders.append(el)
-    tcPr.append(borders)
 
 
 def _shade(cell, fill):
@@ -518,28 +655,61 @@ def _lebar_cm(teks, size_pt, bold=False, italic=False):
 
 def _lebar_sel(teks, size_pt, header=False, utuh=False):
     """Lebar minimum sel: kata terpanjang (bila boleh dibungkus) atau seluruh
-    isi (bila sel pendek yang tidak boleh terpotong, misalnya angka)."""
-    total = 0.0
-    kata_max = 0.0
+    isi (bila sel pendek yang tidak boleh terpotong, misalnya angka).
+
+    Satu kata dapat terdiri atas beberapa potongan bergaya berbeda, misalnya
+    "(" tegak lalu "Feature" miring; lebarnya dijumlahkan karena Word hanya
+    memenggal baris pada spasi atau sesudah tanda hubung."""
+    def ukur(s, b, it, kode):
+        if kode and kode != "math":   # kode sebaris: Consolas, 1,5 pt lebih kecil
+            return len(s) * MONO_EM * (size_pt - 1.5) * 0.03528
+        return _lebar_cm(s, size_pt, b, it)
+
+    total = kata_max = berjalan = 0.0
     for isi, b, it, kode in _tokens(teks):
         b = b or header
-        for w in re.split(r"(\s+)", isi):
+        for w in re.split(r"([^\S ]+)", isi):   # spasi tak-terpotong menyambung kata
             if not w:
                 continue
-            lw = _lebar_cm(w, size_pt, b, it)
-            total += lw
-            if not w.isspace():
-                kata_max = max(kata_max, lw)
+            total += ukur(w, b, it, kode)
+            if w.isspace() and " " not in w:
+                berjalan = 0.0
+                continue
+            # Word boleh memenggal baris sesudah tanda hubung (kecuali pada kode),
+            # sehingga k-nearest-neighbor cukup selebar potongan terpanjangnya
+            bagian = [w] if kode else re.split(r"(?<=-)", w)
+            for k, potongan in enumerate(bagian):
+                if k:
+                    berjalan = 0.0
+                if potongan:
+                    berjalan += ukur(potongan, b, it, kode)
+                    kata_max = max(kata_max, berjalan)
     return total if utuh else kata_max
 
 
-PAD_CM = 0.5   # margin dalam sel kiri-kanan ditambah ruang aman
+PAD_CM = 0.45        # margin dalam sel baku (2 x 0,19 cm) ditambah ruang aman
+PAD_RAPAT_CM = 0.25  # margin dalam sel dirapatkan (2 x 0,08 cm) untuk tabel lebar
 
 
-def _column_widths(rows, size_pt):
+def _is_numeric_col(rows, j):
+    body = [_plain(r[j]) for r in rows[1:] if j < len(r)]
+    return bool(body) and all(re.fullmatch(r"[\d.,%\-+−×\s/()e]*", c) and len(c) <= 18 for c in body)
+
+
+def _is_center_col(rows, j):
+    body = [_plain(r[j]) for r in rows[1:] if j < len(r)]
+    if not body:
+        return False
+    numeric = all(re.fullmatch(r"[\d.,%\-+−×\s/()e]*", c) and len(c) <= 18 for c in body)
+    short = all(len(c) <= 16 for c in body)
+    return numeric or short
+
+
+def _column_widths(rows, size_pt, pad=PAD_CM):
     """Kolom angka dan kolom berisi teks pendek diberi lebar secukupnya agar
     isinya tidak terpotong; sisa lebar halaman dibagikan kepada kolom berisi
     teks panjang sebanding panjang teksnya."""
+    PAD_CM = pad
     ncol = len(rows[0])
     need, bobot = [], []
     for j in range(ncol):
@@ -551,8 +721,6 @@ def _column_widths(rows, size_pt):
             bobot.append(0.0)
             continue
         pendek = _is_center_col(rows, j)
-        # angka tidak boleh terpotong, sedangkan teks pendek seperti
-        # "100% Berhasil" boleh terbungkus dua baris seperti pada skripsi acuan
         angka = _is_numeric_col(rows, j)
         n_hdr = _lebar_sel(col[0], size_pt, header=True)
         n_body = max((_lebar_sel(c, size_pt, utuh=angka) for c in col[1:]), default=0)
@@ -570,41 +738,60 @@ def _column_widths(rows, size_pt):
     return lebar, sum(need) <= TEXT_WIDTH_CM + 1e-6
 
 
-def _is_numeric_col(rows, j):
-    body = [_plain(r[j]) for r in rows[1:] if j < len(r)]
-    return bool(body) and all(re.fullmatch(r"[\d.,%\-+−×\s/()e]*", c) and len(c) <= 18 for c in body)
-
-
-def _is_center_col(rows, j):
-    body = [_plain(r[j]) for r in rows[1:] if j < len(r)]
-    if not body:
-        return False
-    numeric = all(re.fullmatch(r"[\d.,%\-+−×\s/()e]*", c) and len(c) <= 18 for c in body)
-    short = all(len(c) <= 16 for c in body)
-    return numeric or short
+def _perkiraan_tinggi(rows, widths, size_pt):
+    """Perkiraan tinggi tabel dalam cm: jumlah baris teks terbanyak pada setiap
+    baris tabel dikali tinggi satu baris spasi tunggal ditambah margin sel."""
+    baris_cm = size_pt * 1.15 * 0.03528
+    total = 0.0
+    for r in rows:
+        terbanyak = 1
+        for j, teks in enumerate(r[:len(widths)]):
+            isi = _lebar_sel(teks, size_pt, utuh=True)
+            terbanyak = max(terbanyak, int(isi // max(widths[j] - 0.4, 0.5)) + 1)
+        total += terbanyak * baris_cm + 0.07
+    return total
 
 
 def add_table(doc, rows):
+    # angka dalam kurung tidak dipisahkan dari katanya, misalnya "Kaggle (4)",
+    # supaya "(4)" tidak jatuh sendirian ke baris berikutnya di dalam sel
+    rows = [rows[0]] + [[re.sub(r"(?<=\w) (?=\(\d+\))", " ", c) for c in r] for r in rows[1:]]
     header, *body = rows
     ncol = len(header)
-    size = TABLE_SIZE
-    widths, muat = _column_widths(rows, size.pt)
+    # isi tabel memakai huruf standar 12 pt; tabel yang terlalu lebar lebih dulu
+    # dirapatkan margin dalam selnya, baru kemudian hurufnya diturunkan satu
+    # tingkat, agar tidak ada kata yang terpotong di tengah
+    for size in TABLE_SIZES:
+        for pad in (PAD_CM, PAD_RAPAT_CM):
+            widths, muat = _column_widths(rows, size.pt, pad)
+            if muat:
+                break
+        if muat:
+            break
+    if size.pt < 12 or pad != PAD_CM:
+        print(f"  [tabel {size.pt:g} pt{', sel rapat' if pad != PAD_CM else ''}] "
+              f"{' | '.join(_plain(h)[:14] for h in header)}", flush=True)
     if not muat:
-        # tabel dengan banyak kolom: huruf diperkecil satu tingkat agar tidak
-        # ada kata yang terpotong di tengah
-        size = Pt(10)
-        widths, muat = _column_widths(rows, size.pt)
-        print(f"  [tabel 10 pt] {' | '.join(_plain(h)[:14] for h in header)}", flush=True)
-        if not muat:
-            skala = TEXT_WIDTH_CM / sum(widths)
-            widths = [w * skala for w in widths]
-            print(f"  [PERINGATAN: tabel masih terlalu lebar, diskala {skala:.2f}]", flush=True)
+        skala = TEXT_WIDTH_CM / sum(widths)
+        widths = [w * skala for w in widths]
+        print(f"  [PERINGATAN: tabel masih terlalu lebar, diskala {skala:.2f}]", flush=True)
     center = [_is_center_col(rows, j) for j in range(ncol)]
+    # tabel yang muat dalam satu halaman dijaga tetap utuh agar tidak ada baris
+    # yang tertinggal sendirian di bawah halaman sebelumnya
+    utuh = (not any(CELL_IMG_RE.match(c.strip()) for r in rows[1:] for c in r)
+            and _perkiraan_tinggi(rows, widths, size.pt) <= 18.0)
     table = doc.add_table(rows=len(rows), cols=ncol)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
     tblPr = table._tbl.tblPr
     layout = OxmlElement("w:tblLayout"); layout.set(qn("w:type"), "fixed"); tblPr.append(layout)
+    if pad != PAD_CM:
+        mar = OxmlElement("w:tblCellMar")
+        for edge in ("left", "right"):
+            el = OxmlElement(f"w:{edge}")
+            el.set(qn("w:w"), str(int(0.08 / 2.54 * 1440))); el.set(qn("w:type"), "dxa")
+            mar.append(el)
+        tblPr.append(mar)
     for j, w in enumerate(widths):
         for cell in table.columns[j].cells:
             cell.width = Cm(w)
@@ -618,32 +805,33 @@ def add_table(doc, rows):
             cell.vertical_alignment = (WD_CELL_VERTICAL_ALIGNMENT.CENTER if i == 0
                                        else WD_CELL_VERTICAL_ALIGNMENT.TOP)
             p = cell.paragraphs[0]
-            pf = p.paragraph_format
-            pf.line_spacing = 1.0; pf.space_after = Pt(1); pf.space_before = Pt(1)
-            pf.first_line_indent = Cm(0)
+            _pf(p, line=1.0, before=1, after=1)
             m = CELL_IMG_RE.match(text.strip())
             if m and i > 0:
                 w_cm = float(m.group(1).replace(",", ".") or 3.2)
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 p.add_run().add_picture(str(SRC / m.group(2)), width=Cm(w_cm))
+            elif i == 0:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                add_runs(p, text, size=size, force_bold=True)
             else:
-                if i == 0:
-                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                    add_runs(p, text, size=size, force_bold=True)
-                else:
-                    # rata kiri-kanan hanya untuk paragraf panjang seperti kolom
-                    # analisis; sel pendek rata kiri agar tidak muncul celah lebar
-                    paragraf = len(_plain(text)) > 150
-                    p.alignment = (WD_ALIGN_PARAGRAPH.CENTER if center[j]
-                                   else WD_ALIGN_PARAGRAPH.JUSTIFY if paragraf
-                                   else WD_ALIGN_PARAGRAPH.LEFT)
-                    add_runs(p, text, size=size)
+                # rata kiri-kanan hanya untuk paragraf panjang seperti kolom
+                # analisis; sel pendek rata kiri agar tidak muncul celah lebar
+                paragraf = len(_plain(text)) > 150
+                p.alignment = (WD_ALIGN_PARAGRAPH.CENTER if center[j]
+                               else WD_ALIGN_PARAGRAPH.JUSTIFY if paragraf
+                               else WD_ALIGN_PARAGRAPH.LEFT)
+                add_runs(p, text, size=size)
             _set_cell_border(cell)
             if i == 0:
                 _shade(cell, HEADER_FILL)
-    gap = doc.add_paragraph()
-    gap.paragraph_format.line_spacing = 1.0
-    gap.paragraph_format.first_line_indent = Cm(0)
+            # baris kepala selalu ikut pindah bersama baris isi pertamanya, supaya
+            # judul dan kepala tabel tidak tertinggal sendirian di dasar halaman
+            if (utuh and i < len(rows) - 1) or i == 0:
+                for par in cell.paragraphs:
+                    par.paragraph_format.keep_with_next = True
+    _gap(doc)
+    STATE["bawah_judul"] = False
     return table
 
 
@@ -653,17 +841,26 @@ IMG_RE = re.compile(r"^!\[(.*?)\]\((.*?)\)$")
 OL_RE = re.compile(r"^(\d+)\.\s+(.*)$")
 AL_RE = re.compile(r"^([a-z])\.\s+(.*)$")
 UL_RE = re.compile(r"^[-*]\s+(.*)$")
-_EQ = {"n": 0}
+BOLD_LINE_RE = re.compile(r"^\*\*([^*].*?)\*\*$")
+LABEL_KODE_RE = re.compile(r"^\*Script\*/kode program ")
 
 
-def parse_markdown(doc, path: Path, on_chapter, pustaka=False):
-    """on_chapter(bab, judul) dipanggil sebelum judul bab ditulis, agar setiap
-    bab dapat dibuka pada section baru dengan penomoran halamannya sendiri."""
+def _hanya_tebal(s):
+    """Baris yang seluruhnya tebal, misalnya **A. Dataset Kaggle** atau
+    **BAB I PENDAHULUAN**; teks tebal di tengah kalimat tidak termasuk."""
+    m = BOLD_LINE_RE.match(s)
+    return m.group(1) if m and "**" not in m.group(1).replace("***", "") else None
+
+
+def parse_markdown(doc, path: Path, on_chapter, pustaka=False, lampiran=False, list_step=0.75):
+    """on_chapter() dipanggil sebelum judul bab ditulis, agar setiap bab dibuka
+    pada section baru dengan penomoran halamannya sendiri."""
     lines = path.read_text(encoding="utf-8").splitlines()
     i = 0
     pending_bab = None
     pending_table_caption = None
     pending_figure = None
+    label_kode = False
 
     while i < len(lines):
         line = lines[i].rstrip()
@@ -700,12 +897,12 @@ def parse_markdown(doc, path: Path, on_chapter, pustaka=False):
 
         if pending_figure:
             cap = s.strip("*")
-            if cap.startswith("Gambar"):
-                add_figure(doc, pending_figure, cap)
-                pending_figure = None
-                i += 1
-                continue
+            if not cap.startswith("Gambar"):
+                raise ValueError(f"{path.name}:{i + 1}: gambar tanpa keterangan -> {pending_figure}")
+            add_figure(doc, pending_figure, cap)
             pending_figure = None
+            i += 1
+            continue
 
         if CAPTION_TAB_RE.match(s):
             j = i + 1
@@ -723,11 +920,11 @@ def parse_markdown(doc, path: Path, on_chapter, pustaka=False):
                 if not all(re.fullmatch(r":?-{2,}:?", c) for c in cells):
                     rows.append(cells)
                 i += 1
-            if pending_table_caption:
-                caption(doc, pending_table_caption, "Caption Tabel")
-                pending_table_caption = None
-            if rows:
-                add_table(doc, rows)
+            if not pending_table_caption:
+                raise ValueError(f"{path.name}:{i}: tabel tanpa judul tabel di atasnya")
+            caption(doc, pending_table_caption, "Caption Tabel")
+            pending_table_caption = None
+            add_table(doc, rows)
             continue
 
         if s.startswith("$$"):
@@ -740,219 +937,266 @@ def parse_markdown(doc, path: Path, on_chapter, pustaka=False):
                 if i < len(lines):
                     parts.append(lines[i].strip()[:-2]); i += 1
                 latex = " ".join(parts)
-            _EQ["n"] += 1
-            add_equation(doc, latex, _EQ["n"])
+            add_equation(doc, latex)
             continue
 
         if s.startswith("```"):
+            if not label_kode:
+                raise ValueError(f"{path.name}:{i + 1}: kode program tanpa keterangan nama kodenya")
             i += 1
             code = []
             while i < len(lines) and not lines[i].strip().startswith("```"):
                 code.append(lines[i]); i += 1
             i += 1
             add_code_block(doc, code)
+            label_kode = False
             continue
+        label_kode = False
 
         if set(s) <= {"-"} and len(s) >= 3:
             i += 1
             continue
 
+        if lampiran and re.match(r"^Lampiran \d+ ", s):
+            p = doc.add_paragraph(style="Judul Lampiran")
+            _pf(p, line=2.0, align=WD_ALIGN_PARAGRAPH.LEFT, keep=True)
+            add_runs(p, s, force_bold=True)
+            i += 1
+            continue
+
+        tebal = _hanya_tebal(s)
+        if tebal is not None:
+            label_bab = tebal.startswith("BAB ")
+            judul_butir(doc, tebal, jarak=not label_bab)
+            # uraian di bawah label bab pada sistematika penulisan tidak berinden
+            STATE["tanpa_inden"] = label_bab
+            i += 1
+            continue
+
         m = OL_RE.match(s)
         if m:
-            add_list_item(doc, f"{m.group(1)}.", m.group(2)); i += 1; continue
+            add_list_item(doc, f"{m.group(1)}.", m.group(2), step=list_step); i += 1; continue
         m = AL_RE.match(s)
         if m:
-            add_list_item(doc, f"{m.group(1)}.", m.group(2)); i += 1; continue
+            level = 1 if line.startswith((" ", "\t")) else 0
+            add_list_item(doc, f"{m.group(1)}.", m.group(2), level=level, step=list_step)
+            i += 1
+            continue
         m = UL_RE.match(s)
         if m and not s.startswith("**"):
-            add_list_item(doc, "\u2022", m.group(1)); i += 1; continue
+            add_list_item(doc, "\u2022", m.group(1), step=list_step); i += 1; continue
 
-        # label cuplikan kode ditulis rata kiri tanpa inden, seperti acuan
-        if re.match(r"^\*script\* kode program", s):
+        # keterangan nama kode program ditulis rata kiri tanpa inden, seperti template
+        if LABEL_KODE_RE.match(s):
             body_paragraph(doc, s, indent=False, align=WD_ALIGN_PARAGRAPH.LEFT)
+            label_kode = True
             i += 1
             continue
 
         if pustaka:
-            # daftar pustaka acuan: inden gantung 0,85 cm, spasi tunggal,
-            # jarak 6 pt antar-entri
+            # daftar pustaka template: inden gantung 1 cm, spasi tunggal, jarak 8 pt.
+            # Tautan DOI boleh dipotong sesudah "/" (spasi lebar-nol), supaya
+            # baris rata kiri-kanan sebelum tautan tidak meregang renggang.
+            s = re.sub(r"https?://\S+",
+                       lambda m: re.sub(r"(?<!/)/(?!/)", "/​", m.group(0)), s)
             pr = body_paragraph(doc, s, indent=False, spacing=1.0)
-            pr.paragraph_format.left_indent = Cm(0.85)
-            pr.paragraph_format.first_line_indent = Cm(-0.85)
-            pr.paragraph_format.space_after = Pt(6)
+            pr.paragraph_format.left_indent = Cm(1.0)
+            pr.paragraph_format.first_line_indent = Cm(-1.0)
+            pr.paragraph_format.space_after = Pt(8)
+            pr.paragraph_format.keep_together = True   # satu entri tidak terbelah dua halaman
+        elif lampiran or s.startswith("http"):
+            body_paragraph(doc, s, indent=False, align=WD_ALIGN_PARAGRAPH.LEFT)
         else:
-            body_paragraph(doc, s)
+            body_paragraph(doc, s, indent=not STATE["tanpa_inden"])
+            STATE["tanpa_inden"] = False
         i += 1
 
 
-# ----------------------------------------------------------- halaman awal
-def _centred(doc, text_or_runs, bold=False, italic=False, spacing=1.5, after=0, before=0):
+# ------------------------------------------------------ bagian awal (md)
+def _blok(front, judul):
+    """Isi satu bagian 00_Halaman_Depan_dan_Abstrak.md, dari judulnya hingga ---."""
+    m = re.search(rf"^#+ {re.escape(judul)}\s*$(.*?)(?=^---\s*$|\Z)", front, re.M | re.S)
+    if not m:
+        raise KeyError(f"bagian '{judul}' tidak ada di halaman depan")
+    return m.group(1).strip()
+
+
+def _kelompok(blok):
+    """Pecah blok menjadi kelompok baris yang dipisahkan baris kosong."""
+    return [[b.strip() for b in g.splitlines() if b.strip()]
+            for g in re.split(r"\n\s*\n", blok) if g.strip()]
+
+
+def _centred(doc, text="", bold=False, italic=None, line=1.5, after=0, before=0, size=BODY_SIZE):
     p = doc.add_paragraph()
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    pf = p.paragraph_format
-    pf.line_spacing = spacing; pf.space_after = Pt(after); pf.space_before = Pt(before)
-    pf.first_line_indent = Cm(0)
-    runs = text_or_runs if isinstance(text_or_runs, list) else [(text_or_runs, "")]
-    for teks, gaya in runs:
-        _font(p.add_run(teks), bold=bold, italic=italic or "i" in gaya)
+    _pf(p, line=line, before=before, after=after, align=WD_ALIGN_PARAGRAPH.CENTER)
+    if text:
+        add_runs(p, text, size=size, force_bold=bold or None, force_italic=italic)
     return p
 
 
-def title_page(doc):
-    for _ in range(1):
-        _centred(doc, "", spacing=1.0)
-    _centred(doc, JUDUL_ID, bold=True, after=48)
-    _centred(doc, "SKRIPSI", bold=True, after=48)
-    _centred(doc, "diajukan untuk menempuh ujian sarjana")
-    _centred(doc, "pada Fakultas [nama fakultas]")
-    _centred(doc, "Universitas [nama universitas]", after=48)
-    _centred(doc, "[NAMA LENGKAP MAHASISWA]")
-    _centred(doc, "NPM [NOMOR POKOK MAHASISWA]", after=60)
-    _centred(doc, "[LOGO UNIVERSITAS]", italic=True, after=90)
-    for t in ("UNIVERSITAS [NAMA UNIVERSITAS]", "FAKULTAS [NAMA FAKULTAS]",
-              "PROGRAM STUDI [NAMA PROGRAM STUDI]", "[KOTA]", "2026"):
-        _centred(doc, t, spacing=1.0)
+def _baris_ganda(doc, lines, line=1.5, bold=False):
+    """Beberapa baris dalam satu paragraf yang dipisah pindah baris."""
+    p = _centred(doc, line=line)
+    for k, t in enumerate(lines):
+        add_runs(p, t, force_bold=bold or None)
+        if k < len(lines) - 1:
+            p.runs[-1].add_break()
+    return p
 
 
-def lembar_pengesahan(doc):
-    _centred(doc, "", spacing=1.0)
-    _centred(doc, "SKRIPSI", bold=True, after=12)
-    _centred(doc, JUDUL_ID, bold=True, after=18)
-    _centred(doc, JUDUL_EN, bold=True, italic=True, after=18)
-    _centred(doc, "Telah dipersiapkan dan disusun oleh", after=12)
-    _centred(doc, "[NAMA LENGKAP MAHASISWA]", spacing=1.2)
-    _centred(doc, "NPM [NOMOR POKOK MAHASISWA]", after=12)
-    _centred(doc, "Telah dipertahankan di depan Tim Penguji", spacing=1.2)
-    _centred(doc, "pada tanggal [tanggal sidang]", after=12)
-    _centred(doc, "Susunan Tim Penguji", after=12)
-
-    anggota = [("[Nama Ketua Tim Penguji]", "Ketua Tim Penguji"),
-               ("[Nama Pembimbing Utama]", "Pembimbing"),
-               ("[Nama Pembimbing Pendamping]", "Co-Pembimbing"),
-               ("[Nama Penguji]", "Penguji"),
-               ("[Nama Penguji]", "Penguji")]
-    t = doc.add_table(rows=len(anggota), cols=4)
-    t.alignment = WD_TABLE_ALIGNMENT.CENTER
-    t.autofit = False
-    for j, w in enumerate((0.9, 6.0, 3.8, 3.3)):
-        for cell in t.columns[j].cells:
-            cell.width = Cm(w)
-    for i, (nama, peran) in enumerate(anggota):
-        isi = (f"{i + 1}.", None, peran, "..........................")
-        for j in range(4):
-            p = t.cell(i, j).paragraphs[0]
-            p.paragraph_format.line_spacing = 1.0
-            p.paragraph_format.space_after = Pt(8)
-            p.paragraph_format.first_line_indent = Cm(0)
-            if j == 1:
-                _font(p.add_run(nama)).underline = True
-                _font(p.add_run()).add_break()
-                _font(p.add_run("NIP. [NIP]"))
-            elif j == 3:
-                _font(p.add_run()).add_break()
-                _font(p.add_run(isi[j]))
-            else:
-                _font(p.add_run(isi[j]))
+def title_page(doc, front):
+    judul, skripsi, diajukan, identitas, institusi = _kelompok(_blok(front, "HALAMAN JUDUL"))
+    _centred(doc, judul[0])
+    _centred(doc); _centred(doc)
+    _centred(doc, skripsi[0])
+    _centred(doc); _centred(doc)
+    _baris_ganda(doc, diajukan)
+    _centred(doc); _centred(doc)
+    _baris_ganda(doc, identitas)
+    _centred(doc)
+    p = _centred(doc, line=1.0, before=10)
+    p.add_run().add_picture(str(LOGO), width=Cm(4.42))
+    _centred(doc); _centred(doc)
+    _baris_ganda(doc, institusi, line=1.0)
 
 
-def kata_pengantar(doc):
+def _penguji(doc, nomor, nama, peran, nip, first):
+    """Satu anggota tim penguji: nama bergaris bawah dan perannya, lalu NIP dan
+    garis titik tempat tanda tangan di sisi kanan, seperti pada template."""
+    p = doc.add_paragraph()
+    pf = _pf(p, line=1.0, before=0 if first else 6, align=WD_ALIGN_PARAGRAPH.LEFT)
+    pf.left_indent = Cm(0.63); pf.first_line_indent = Cm(-0.63)
+    pf.tab_stops.add_tab_stop(Cm(0.63))
+    pf.tab_stops.add_tab_stop(Cm(7.6))
+    _font(p.add_run(f"{nomor}.\t"))
+    _font(p.add_run(nama), underline=True)
+    _font(p.add_run(f"\t{peran}"))
+    q = doc.add_paragraph()
+    qf = _pf(q, line=1.0, align=WD_ALIGN_PARAGRAPH.LEFT)
+    qf.left_indent = Cm(0.63)
+    qf.tab_stops.add_tab_stop(Cm(TEXT_WIDTH_CM), WD_TAB_ALIGNMENT.RIGHT)
+    _font(q.add_run(f"NIP. {nip}\t………………………"))
+
+
+def lembar_pengesahan(doc, front):
+    blok = _blok(front, "LEMBAR PENGESAHAN")
+    tabel = [b for b in blok.splitlines() if b.strip().startswith("|")]
+    teks = "\n".join(b for b in blok.splitlines() if not b.strip().startswith("|"))
+    g = _kelompok(teks)
+    skripsi, judul_id, judul_en, disusun, identitas, sidang, susunan = g
+    _centred(doc, skripsi[0], line=1.0)
+    _centred(doc, line=1.0)
+    _centred(doc, judul_id[0])
+    _centred(doc, line=1.0)
+    _centred(doc, judul_en[0])
+    _centred(doc)
+    _centred(doc, disusun[0])
+    _centred(doc)
+    _baris_ganda(doc, identitas)
+    _centred(doc)
+    _baris_ganda(doc, sidang)
+    _centred(doc, line=1.0)
+    _centred(doc, susunan[0])
+    _centred(doc, line=1.0)
+    anggota = [[c.strip() for c in b.strip().strip("|").split("|")] for b in tabel[2:]]
+    for k, (no, nama, peran, nip) in enumerate(anggota):
+        _penguji(doc, no, nama, peran, nip, first=(k == 0))
+
+
+def kata_pengantar(doc, front):
     front_heading(doc, "Kata Pengantar")
-    p = body_paragraph(doc, "Puji dan syukur penulis panjatkan ke hadirat Tuhan Yang Maha Esa, "
-                            "yang telah melimpahkan rahmat dan karunia-Nya sehingga penulis dapat "
-                            "menyelesaikan penyusunan skripsi yang berjudul “")
-    for teks, gaya in JUDUL_ID:
-        _font(p.add_run(teks), bold=True, italic="i" in gaya)
-    add_runs(p, "” sebagai salah satu syarat menempuh ujian sarjana pada Program Studi "
-                "[nama program studi], Fakultas [nama fakultas], Universitas [nama universitas].")
-    body_paragraph(doc, "Dalam proses penyusunan dan penulisan skripsi ini tidak terlepas dari "
-                        "bantuan, bimbingan, serta dukungan dari berbagai pihak. Oleh karena itu, "
-                        "dalam kesempatan ini penulis mengucapkan terima kasih sebanyak-banyaknya "
-                        "kepada:")
-    items = [
-        "[Nama Dekan], selaku Dekan Fakultas [nama fakultas] Universitas [nama universitas].",
-        "[Nama Kepala Departemen], selaku Kepala Departemen [nama departemen] Fakultas [nama "
-        "fakultas] Universitas [nama universitas].",
-        "[Nama Ketua Program Studi], selaku Ketua Program Studi [nama program studi] Fakultas "
-        "[nama fakultas] Universitas [nama universitas].",
-        "[Nama Pembimbing Utama], selaku dosen pembimbing utama yang telah meluangkan waktu, "
-        "arahan, dan koreksi selama proses penyusunan skripsi ini.",
-        "[Nama Pembimbing Pendamping], selaku dosen pembimbing pendamping.",
-        "Seluruh dosen dan staf Program Studi [nama program studi] yang telah memberikan ilmu "
-        "dan bantuan administratif selama masa perkuliahan.",
-        "Keluarga penulis yang selalu memberikan motivasi dan doa yang menjadi pendorong dalam "
-        "penyelesaian skripsi ini.",
-        "Rekan-rekan mahasiswa yang telah memberikan bantuan dan diskusi selama proses "
-        "penelitian berlangsung.",
-    ]
-    for k, t in enumerate(items, start=1):
-        add_list_item(doc, f"{k}.", t)
-    body_paragraph(doc, "Penulis menyadari bahwa skripsi ini masih memiliki kekurangan, sehingga "
-                        "kritik dan saran yang membangun sangat penulis harapkan. Semoga skripsi "
-                        "ini dapat bermanfaat bagi pembaca dan bagi pengembangan penelitian "
-                        "selanjutnya.")
-    for t in ("[Kota], [tanggal] 2026", "", "", "Penulis"):
-        body_paragraph(doc, t, indent=False, align=WD_ALIGN_PARAGRAPH.RIGHT)
-
-
-def abstrak(doc, front, key, head):
-    front_heading(doc, head)
-    block = front.split(key, 1)[1].split("---", 1)[0]
-    for para in [x.strip() for x in block.strip().splitlines() if x.strip()]:
-        is_kw = para.startswith("**Kata Kunci**") or para.startswith("**Keywords**")
-        p = body_paragraph(doc, para, indent=not is_kw, spacing=1.0)
-        if is_kw:
-            p.paragraph_format.space_before = Pt(12)
+    blok = _blok(front, "KATA PENGANTAR")
+    paragraf = [b.strip() for b in blok.split("\n\n") if b.strip()]
+    for para in paragraf:
+        baris = [b.strip() for b in para.splitlines() if b.strip()]
+        if all(OL_RE.match(b) for b in baris):
+            for b in baris:
+                m = OL_RE.match(b)
+                add_list_item(doc, f"{m.group(1)}.", m.group(2), step=1.0)
+        elif para.startswith("Jatinangor,") or para == "Penulis":
+            # tanggal dan penulis di sisi kanan, satu baris kosong di antaranya
+            p = body_paragraph(doc, para, indent=False, align=WD_ALIGN_PARAGRAPH.CENTER)
+            p.paragraph_format.left_indent = Cm(8.5)
+            if para == "Penulis":
+                p.paragraph_format.space_before = Pt(2 * BARIS)
         else:
-            p.paragraph_format.space_after = Pt(0)
+            body_paragraph(doc, para)
+
+
+def abstrak(doc, front, key, head, english=False):
+    front_heading(doc, head)
+    blok = _blok(front, key)
+    for para in [x.strip() for x in blok.split("\n\n") if x.strip()]:
+        is_kw = para.startswith("**Kata Kunci**") or para.startswith("**Keywords**")
+        if is_kw:
+            # label kata kunci tebal; isi abstract berbahasa Inggris seluruhnya miring
+            p = body_paragraph(doc, para, indent=False, spacing=1.5,
+                               italic=True if english else None)
+            p.paragraph_format.space_before = Pt(BARIS)
+        else:
+            body_paragraph(doc, para, spacing=1.0, italic=True if english else None)
 
 
 def toc_list(doc, head, instr):
     front_heading(doc, head)
     p = doc.add_paragraph()
-    p.paragraph_format.line_spacing = 1.5
-    p.paragraph_format.first_line_indent = Cm(0)
+    _pf(p, line=1.5)
     _field(_font(p.add_run()), instr)
 
 
-def daftar_lampiran(doc):
-    front_heading(doc, "Daftar Lampiran")
-    body_paragraph(doc, "Lampiran 1 Tautan Repositori GitHub Berisi Kode Sumber",
-                   indent=False, spacing=1.5, align=WD_ALIGN_PARAGRAPH.LEFT)
-
-
-def riwayat_hidup(doc):
-    front_heading(doc, "Riwayat Hidup")
-    body_paragraph(doc, "[Bagian ini diisi dengan riwayat hidup penulis: nama lengkap, tempat "
-                        "dan tanggal lahir, riwayat pendidikan formal dari jenjang dasar hingga "
-                        "perguruan tinggi, serta pengalaman organisasi, kegiatan, atau prestasi "
-                        "yang relevan.]")
-
-
 # ----------------------------------------------------------------- rakitan
-def main():
+def _kutipan(teks):
+    """(nama keluarga, tahun) dari setiap kutipan di teks."""
+    nama = r"[A-Z][A-Za-z\-]+"
+    return {(m.group(1), m.group(3)) for m in
+            re.finditer(rf"({nama})(?: et al\.| & ({nama}))?,? \(?((?:19|20)\d\d)\)?", teks)}
+
+
+def pustaka_bab(bab_files, out: Path):
+    """Daftar pustaka yang hanya memuat sumber yang dikutip pada bab terpilih."""
+    dikutip = set()
+    for f in bab_files:
+        dikutip |= _kutipan((SRC / f).read_text(encoding="utf-8"))
+    baris = (SRC / "DAFTAR_PUSTAKA.md").read_text(encoding="utf-8").splitlines()
+    simpan = [baris[0], ""]
+    for b in baris[1:]:
+        m = re.match(r"^([^,(]+),.*?\(((?:19|20)\d\d)\)", b.strip())
+        if m and (m.group(1).strip(), m.group(2)) in dikutip:
+            simpan += [b.strip(), ""]
+    out.write_text("\n".join(simpan), encoding="utf-8")
+    return out
+
+
+def build(scope="lengkap"):
     doc = setup_document()
+    STATE.update(bab=0, eq=0, bawah_judul=False, tanpa_inden=False)
+    front = (SRC / "00_Halaman_Depan_dan_Abstrak.md").read_text(encoding="utf-8")
+    bab_files = BAB if scope == "lengkap" else BAB[:1]
 
     # halaman judul: dihitung sebagai halaman i tetapi nomornya tidak tampil
-    title_page(doc)
+    title_page(doc, front)
     number_front(doc.sections[0], start=1, show=False)
 
     # lembar pengesahan berbingkai, halaman ii
     s = new_section(doc)
     number_front(s)
     page_border(s)
-    lembar_pengesahan(doc)
+    lembar_pengesahan(doc, front)
 
-    front = (SRC / "00_Halaman_Depan_dan_Abstrak.md").read_text(encoding="utf-8")
     s = new_section(doc)
     number_front(s)
-    kata_pengantar(doc)
-    for key, head in (("## ABSTRAK", "Abstrak"), ("## ABSTRACT", "*Abstract*")):
-        doc.add_page_break()
-        abstrak(doc, front, key, head)
+    kata_pengantar(doc, front)
+    doc.add_page_break(); abstrak(doc, front, "ABSTRAK", "Abstrak")
+    doc.add_page_break(); abstrak(doc, front, "ABSTRACT", "*ABSTRACT*", english=True)
     doc.add_page_break(); toc_list(doc, "Daftar Isi", r' TOC \o "1-3" \h \z \u ')
-    doc.add_page_break(); toc_list(doc, "Daftar Tabel", r' TOC \h \z \t "Caption Tabel,1" ')
-    doc.add_page_break(); toc_list(doc, "Daftar Gambar", r' TOC \h \z \t "Caption Gambar,1" ')
-    doc.add_page_break(); daftar_lampiran(doc)
+    teks_bab = "\n".join((SRC / f).read_text(encoding="utf-8") for f in bab_files)
+    if re.search(r"^Tabel \d+\.\d+ ", teks_bab, re.M):
+        doc.add_page_break(); toc_list(doc, "Daftar Tabel", r' TOC \h \z \t "Caption Tabel,9" ')
+    if re.search(r"^!\[", teks_bab, re.M):
+        doc.add_page_break(); toc_list(doc, "Daftar Gambar", r' TOC \h \z \t "Caption Gambar,9" ')
+    if scope == "lengkap":
+        doc.add_page_break(); toc_list(doc, "Daftar Lampiran", r' TOC \h \z \t "Judul Lampiran,9" ')
 
     state = {"first": True}
 
@@ -961,22 +1205,30 @@ def main():
         number_chapter(s, start=1 if state["first"] else None)
         state["first"] = False
 
-    for name in ("BAB_I_Pendahuluan.md", "BAB_II_Tinjauan_Pustaka.md",
-                 "BAB_III_Analisis_dan_Perancangan.md", "BAB_IV_Hasil_dan_Pembahasan.md",
-                 "BAB_V_Kesimpulan_dan_Saran.md", "DAFTAR_PUSTAKA.md", "LAMPIRAN.md"):
-        parse_markdown(doc, SRC / name, on_chapter, pustaka=(name == "DAFTAR_PUSTAKA.md"))
-
-    on_chapter()
-    riwayat_hidup(doc)
+    for name in bab_files:
+        parse_markdown(doc, SRC / name, on_chapter,
+                       list_step=1.0 if name.startswith("BAB_V") else 0.75)
+    if scope == "lengkap":
+        parse_markdown(doc, SRC / "DAFTAR_PUSTAKA.md", on_chapter, pustaka=True)
+        parse_markdown(doc, SRC / "LAMPIRAN.md", on_chapter, lampiran=True)
+        # riwayat hidup dikosongkan untuk diisi penulis, seperti pada template
+        on_chapter()
+        front_heading(doc, "Riwayat Hidup", in_toc=False)
+        out = SRC / "Skripsi_Lengkap.docx"
+    else:
+        import tempfile
+        tmp = Path(tempfile.gettempdir()) / "DAFTAR_PUSTAKA_BAB_I.md"
+        parse_markdown(doc, pustaka_bab(bab_files, tmp), on_chapter, pustaka=True)
+        out = SRC / "Skripsi_Bab_I.docx"
 
     try:
-        doc.save(OUT)
-        print(f"Saved: {OUT}", flush=True)
+        doc.save(out)
+        print(f"Saved: {out}", flush=True)
     except PermissionError:
-        alt = OUT.with_name(OUT.stem + "_BARU.docx")
+        alt = out.with_name(out.stem + "_BARU.docx")
         doc.save(alt)
         print(f"Saved: {alt}  (berkas utama terkunci Word)", flush=True)
 
 
 if __name__ == "__main__":
-    main()
+    build("bab1" if len(sys.argv) > 1 and sys.argv[1] == "bab1" else "lengkap")

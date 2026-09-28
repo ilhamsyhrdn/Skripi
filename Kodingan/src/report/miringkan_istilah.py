@@ -37,6 +37,9 @@ ISTILAH = sorted([
     "baseline", "batch", "softmax", "argmax", "framework", "debugging", "windowing", "default",
     "tensor", "logits", "web", "online", "gatekeeper", "thumbnail", "preprocessing",
     "script", "hyperparameter tuning",
+    "malignant", "benign", "macro-f1", "f1-score", "excluded", "subset", "preset", "metadata",
+    "residual", "use case diagram", "use case", "user", "random seed", "worker", "hashing",
+    "framing", "bug", "widget",
 ], key=len, reverse=True)
 POLA = re.compile(r"(?<![\w\-/.])(" + "|".join(re.escape(s) for s in ISTILAH) + r")(?![\w\-])",
                   re.IGNORECASE)
@@ -99,6 +102,10 @@ def miringkan_baris(baris):
             baru.append([isi, b, it, kode]); continue
         pos = 0
         for m in POLA.finditer(isi):
+            # nama folder atau label yang dikutip apa adanya, misalnya "Benign",
+            # dibiarkan tegak karena merupakan teks literal
+            if isi[m.start() - 1:m.start()] == '"' and isi[m.end():m.end() + 1] == '"':
+                continue
             if m.start() > pos:
                 baru.append([isi[pos:m.start()], b, False, False])
             baru.append([m.group(0), b, True, False])
@@ -122,6 +129,8 @@ def olah(teks):
             continue
         if s.startswith("|---") or re.match(r"^!\[.*\]\(.*\)$", s):
             continue
+        if s.startswith("$$"):
+            continue  # rumus LaTeX tidak boleh disisipi penanda miring
         # Keterangan gambar pada skripsi acuan dicetak tegak, jadi pembungkus
         # miring *Gambar ...* dilepas lebih dulu, lalu istilah asing di dalamnya
         # dimiringkan satu per satu seperti teks biasa.
